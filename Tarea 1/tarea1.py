@@ -64,3 +64,4 @@ names_df.show()
 joint_df = stats_df.join(names_df, stats_df.customer_id == names_df.id)
 joint_df.printSchema()
 joint_df.show()
+
