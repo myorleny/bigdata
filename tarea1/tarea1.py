@@ -13,6 +13,13 @@ def unir_dataframes(ciclista_df, ruta_df, actividad_df):
   
     return ciclista_actividad_ruta_df
 
+# Obtiene las mejores notas por estudiante
+def obtener_kilometros_por_ciclista (ciclista_actividad_ruta_df):
+    
+	ciclista_actividad_ruta_df.createOrReplaceTempView("ciclista_actividad_ruta")
+    
+    #return spark.sql("SELECT cedula, nombre_Completo, codigo, nombre_Ruta, provincia, fecha, SUM(kilometros) as TotalKilometros FROM ciclista_actividad_ruta WHERE kilometros IS NOT NULL GROUP BY cedula, nombre_Completo, codigo, nombre_Ruta, provincia, fecha")
+	return spark.sql("SELECT cedula, nombre_Completo, codigo, nombre_Ruta, provincia, fecha, SUM(nvl(kilometros,0)) as TotalKilometros FROM ciclista_actividad_ruta GROUP BY cedula, nombre_Completo, codigo, nombre_Ruta, provincia, fecha")
 
 
 def programaPrincipal():
@@ -53,6 +60,10 @@ def programaPrincipal():
     ciclista_actividad_ruta_df = unir_dataframes(ciclista_df, ruta_df, actividad_df)
 
     ciclista_actividad_ruta_df.show()
+
+    ciclistas_kilometros_df = obtener_kilometros_por_ciclista(ciclista_actividad_ruta_df)
+
+    ciclistas_kilometros_df.show()    
 
 
 programaPrincipal()

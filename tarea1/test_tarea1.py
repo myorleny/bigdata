@@ -31,13 +31,15 @@ def test_union_normal_dataframes(spark_session):
     assert actual_ds.collect() == esperado_ds.collect()
 
 def test_union_ciclista_no_tiene_actividad(spark_session):
-    ciclista_data = [(201471234, 'Julio Mora','Alajuela'), (307530951, 'Marcia Alfaro','Heredia'), (108880123, 'Miguel Morales','San José')]
+    ciclista_data = [(201471234, 'Julio Mora','Alajuela'), (307530951, 'Marcia Alfaro','Heredia')]
     ciclista_ds = spark_session.createDataFrame(ciclista_data,
                                               ['cedula', 'nombre_Completo','provincia'])
-    ruta_data = [(1, 'Grecia-Bosque del niño',15), (2, 'Vuelta a Heredia',50)]
+    
+    ruta_data = [(1, 'Grecia-Bosque del niño',15)]
     ruta_ds = spark_session.createDataFrame(ruta_data,
                                                ['codigo', 'nombre_Ruta','kilometros'])
-    actividad_data = [(1, 201471234, '2021-02-15'), (2, 307530951, '2021-03-01')]
+    
+    actividad_data = [(1, 201471234, '2021-02-15')]
     actividad_ds = spark_session.createDataFrame(actividad_data,
                                               ['codigo_Ruta', 'cedula_Ciclista','fecha'])                                               
 
@@ -49,9 +51,8 @@ def test_union_ciclista_no_tiene_actividad(spark_session):
 
     esperado_ds = spark_session.createDataFrame(
         [
-            (108880123, 'Miguel Morales','San José', None, None, None, None, None,None),
+            (307530951, 'Marcia Alfaro','Heredia', None, None, None, None, None,None),
             (201471234, 'Julio Mora','Alajuela', 1, 201471234, '2021-02-15', 1, 'Grecia-Bosque del niño',15),
-            (307530951, 'Marcia Alfaro','Heredia', 2, 307530951, '2021-03-01', 2, 'Vuelta a Heredia',50),
         ],
         ['cedula', 'nombre_Completo','provincia','codigo_Ruta', 'cedula_Ciclista','fecha','codigo', 'nombre_Ruta','kilometros'])
 
