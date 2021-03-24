@@ -7,10 +7,10 @@ spark = SparkSession.builder.appName("Read Transactions").getOrCreate()
 # Une los datos de los tres archivos
 def unir_dataframes(ciclista_df, ruta_df, actividad_df):
     
-    ciclista_actividad_df = ciclista_df.join(actividad_df, ['cedula','cedula'], "left_outer")
+    ciclista_actividad_df = ciclista_df.join(actividad_df, ciclista_df.cedula == actividad_df.cedula_Ciclista, "left_outer")
 
-    ciclista_actividad_ruta_df = ciclista_actividad_df.join(ruta_df, ['codigo_Ruta','codigo_Ruta'], "left_outer")
-    
+    ciclista_actividad_ruta_df = ciclista_actividad_df.join(ruta_df, ciclista_actividad_df.codigo_Ruta == ruta_df.codigo , "left_outer")
+  
     return ciclista_actividad_ruta_df
 
 
@@ -28,7 +28,7 @@ def programaPrincipal():
 
     ciclista_df.show()
 
-    ruta_schema = StructType([StructField('codigo_Ruta', IntegerType()),
+    ruta_schema = StructType([StructField('codigo', IntegerType()),
                             StructField('nombre_Ruta', StringType()),
                             StructField('kilometros', FloatType()),
                             ])
@@ -40,7 +40,7 @@ def programaPrincipal():
     ruta_df.show()
 
     actividad_schema = StructType([StructField('codigo_Ruta', IntegerType()),
-                            StructField('cedula', IntegerType()),
+                            StructField('cedula_Ciclista', IntegerType()),
                             StructField('fecha', DateType()),
                             ])
 
