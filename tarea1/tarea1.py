@@ -1,6 +1,7 @@
 from pyspark.sql import SparkSession
 from pyspark.sql.types import (IntegerType, FloatType, StructField,
                                StructType, TimestampType, StringType, DateType)
+from pyspark.sql.functions import col, date_format, udf                               
 
 spark = SparkSession.builder.appName("Read Transactions").getOrCreate()
 
@@ -13,13 +14,30 @@ def unir_dataframes(ciclista_df, ruta_df, actividad_df):
   
     return ciclista_actividad_ruta_df
 
-# Obtiene las mejores notas por estudiante
+# Obtiene los kilómetros por ciclista
 def obtener_kilometros_por_ciclista (ciclista_actividad_ruta_df):
     
 	ciclista_actividad_ruta_df.createOrReplaceTempView("ciclista_actividad_ruta")
     
     #return spark.sql("SELECT cedula, nombre_Completo, codigo, nombre_Ruta, provincia, fecha, SUM(kilometros) as TotalKilometros FROM ciclista_actividad_ruta WHERE kilometros IS NOT NULL GROUP BY cedula, nombre_Completo, codigo, nombre_Ruta, provincia, fecha")
 	return spark.sql("SELECT cedula, nombre_Completo, codigo, nombre_Ruta, provincia, fecha, SUM(nvl(kilometros,0)) as TotalKilometros FROM ciclista_actividad_ruta GROUP BY cedula, nombre_Completo, codigo, nombre_Ruta, provincia, fecha")
+
+    # Group By and Select the data already aggregated
+    #sum_df = ciclista_actividad_ruta_df.groupBy("cedula", "nombre_Completo", "codigo", "nombre_Ruta", "provincia", "fecha").sum()
+    #sum_df.show()
+
+    #ciclistas_kilometros_df = \
+     #   sum_df.select(
+      #      col('cedula'),
+       #     col('nombre_Completo'),
+        #    col('codigo'),
+         #   col('nombre_Ruta'),
+          #  col('provincia'),
+           # col('fecha'),
+            #col('sum(kilometros)').alias('TotalKilometros'))
+
+    #ciclistas_kilometros_df.printSchema()
+    #ciclistas_kilometros_df.show()
 
 
 def programaPrincipal():
@@ -61,9 +79,25 @@ def programaPrincipal():
 
     ciclista_actividad_ruta_df.show()
 
-    ciclistas_kilometros_df = obtener_kilometros_por_ciclista(ciclista_actividad_ruta_df)
+    #ciclistas_kilometros_df = obtener_kilometros_por_ciclista(ciclista_actividad_ruta_df)
 
-    ciclistas_kilometros_df.show()    
+    #ciclistas_kilometros_df.show()    
+
+    sum_df = ciclista_actividad_ruta_df.groupBy("cedula", "nombre_Completo", "codigo", "nombre_Ruta", "provincia", "fecha").sum("kilometros")
+    sum_df.show()
+
+    ciclistas_kilometros_df = \
+        sum_df.select(
+            col('cedula'),
+            col('nombre_Completo'),
+            col('codigo'),
+            col('nombre_Ruta'),
+            col('provincia'),
+            col('fecha'),
+            col('sum(kilometros)').alias('TotalKilometros'))
+
+    ciclistas_kilometros_df.printSchema()
+    ciclistas_kilometros_df.show()
 
 
 programaPrincipal()
