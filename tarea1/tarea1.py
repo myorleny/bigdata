@@ -1,7 +1,7 @@
 from pyspark.sql import SparkSession
 from pyspark.sql.types import (IntegerType, FloatType, StructField,
                                StructType, TimestampType, StringType, DateType)
-from pyspark.sql.functions import col, date_format, udf, rank                              
+from pyspark.sql.functions import col, date_format, udf, rank, lit                              
 from pyspark.sql.window import Window
 
 
@@ -39,7 +39,36 @@ def obtener_kilometros_por_ciclista (ciclista_actividad_ruta_df):
 # Obtiene el top N de ciclistas por provincia, en total de kilómetros 
 def obtener_topN_ciclistas_por_provincia_en_total_de_kilometros (ciclistas_kilometros_df, N):
     
-    provincia_ciclistas_kilometros_df = ciclistas_kilometros_df.groupBy("provincia", "cedula", "nombre_Completo").sum("TotalKilometros")
+    provincia_ciclistas_kilometros_total_df = ciclistas_kilometros_df.groupBy("provincia", "cedula", "nombre_Completo").sum("TotalKilometros")
+    provincia_ciclistas_kilometros_total_df.show()
+
+    provincia_ciclistas_kilometros_total_df = \
+    provincia_ciclistas_kilometros_total_df.select(
+        col('provincia'),
+        col('cedula'),
+        col('nombre_Completo'),
+        col('sum(TotalKilometros)').alias('TotalKilometros'))
+    provincia_ciclistas_kilometros_total_df.show()
+
+    window = Window.partitionBy('provincia').orderBy(col('TotalKilometros').desc())
+    provincia_ciclistas_kilometros_total_df = provincia_ciclistas_kilometros_total_df.withColumn("Posicion_Por_Provincia",rank().over(window))
+    provincia_ciclistas_kilometros_total_df = provincia_ciclistas_kilometros_total_df.withColumn("Tipo_Top_N_Ciclistas_Por_Provincia",lit("Total de Km"))
+	
+    provincia_ciclistas_kilometros_total_df = provincia_ciclistas_kilometros_total_df.filter(provincia_ciclistas_kilometros_total_df.Posicion_Por_Provincia <= N)
+
+    provincia_ciclistas_kilometros_total_df = provincia_ciclistas_kilometros_total_df.select(
+    col('Tipo_Top_N_Ciclistas_Por_Provincia'),
+    col('provincia'),
+    col('cedula'),
+    col('nombre_Completo'),
+    col('TotalKilometros').alias('Valor'))  
+	
+    return provincia_ciclistas_kilometros_total_df
+
+# Obtiene el top N de ciclistas por provincia, en promedio de kilómetros por día 
+def obtener_topN_ciclistas_por_provincia_en_promedio_de_kilometros_por_dia (ciclistas_kilometros_df, N):
+    
+    provincia_ciclistas_kilometros_df = ciclistas_kilometros_df.groupBy("provincia", "cedula", "nombre_Completo", "fecha").avg("TotalKilometros")
     provincia_ciclistas_kilometros_df.show()
 
     provincia_ciclistas_kilometros_df = \
@@ -52,10 +81,18 @@ def obtener_topN_ciclistas_por_provincia_en_total_de_kilometros (ciclistas_kilom
 
     window = Window.partitionBy('provincia').orderBy(col('TotalKilometros').desc())
     provincia_ciclistas_kilometros_df = provincia_ciclistas_kilometros_df.withColumn("Posicion_Por_Provincia",rank().over(window))
+    #provincia_ciclistas_kilometros_df = provincia_ciclistas_kilometros_df.withColumn("Top_N_Tipo",str("Por provincia, en total de kilómetros"))
 	
     provincia_ciclistas_kilometros_df = provincia_ciclistas_kilometros_df.filter(provincia_ciclistas_kilometros_df.Posicion_Por_Provincia <= N)
+
+    provincia_ciclistas_kilometros_df.select(
+        col('Tipo_Top_N_Ciclistas_Por_Provincia'),
+        col('provincia'),
+        col('cedula'),
+        col('nombre_Completo'),
+        col('TotalKilometros'))    
 	
-    return provincia_ciclistas_kilometros_df
+    return provincia_ciclistas_kilometros_df    
 
 def programaPrincipal():
 
@@ -98,11 +135,51 @@ def programaPrincipal():
 
     ciclistas_kilometros_df = obtener_kilometros_por_ciclista(ciclista_actividad_ruta_df)
 
+    print("ciclistas_kilometros_df")
     ciclistas_kilometros_df.show()
 
     N = 1
-    provincia_ciclistas_kilometros_df = obtener_topN_ciclistas_por_provincia_en_total_de_kilometros (ciclistas_kilometros_df, N)
-    provincia_ciclistas_kilometros_df.show()
+    provincia_ciclistas_kilometros_total_df = obtener_topN_ciclistas_por_provincia_en_total_de_kilometros (ciclistas_kilometros_df, N)
+    provincia_ciclistas_kilometros_total_df.show()
+
+    #Obtiene el total de kilómetros por persona por día
+    provincia_ciclistas_kilometros2_df = ciclistas_kilometros_df.groupBy("cedula", "fecha").sum("TotalKilometros")
+    #Obtiene la cantidad de días en que cada ciclista tuvo actividad
+    provincia_ciclistas_kilometros2_df = provincia_ciclistas_kilometros2_df.groupBy("cedula").count()
+    provincia_ciclistas_kilometros2_df = provincia_ciclistas_kilometros2_df.select(
+        col('cedula').alias('cedula_ciclista'),
+        col('count').alias('CantidadDias'))
+    #Obtiene el total de kilómetros por ciclista
+    provincia_ciclistas_kilometros3_df = ciclistas_kilometros_df.groupBy("provincia", "cedula", "nombre_Completo").sum("TotalKilometros")
+    #hace join del dataframe que contiene el total de kilómetros por ciclista con el que contiene la cantidad de día que cada ciclista tuvo actividad
+    provincia_ciclistas_kilometros4_df = provincia_ciclistas_kilometros3_df.join(provincia_ciclistas_kilometros2_df, provincia_ciclistas_kilometros3_df.cedula == provincia_ciclistas_kilometros2_df.cedula_ciclista)
+    provincia_ciclistas_kilometros4_df = provincia_ciclistas_kilometros4_df.select(
+        col('provincia'),
+        col('cedula'),
+        col('nombre_Completo'),
+        col('sum(TotalKilometros)').alias('TotalKilometros'),
+        col('CantidadDias'))
+    #Agrega nueva columna que calcula el promedio de kilómetros por ciclista
+    provincia_ciclistas_kilometros5_df = provincia_ciclistas_kilometros4_df.withColumn("Promedio_Km_Por_Dia",provincia_ciclistas_kilometros4_df.TotalKilometros/provincia_ciclistas_kilometros4_df.CantidadDias)
+    provincia_ciclistas_kilometros5_df.show()
+
+    window = Window.partitionBy('provincia').orderBy(col('Promedio_Km_Por_Dia').desc())
+    provincia_ciclistas_kilometros6_df = provincia_ciclistas_kilometros5_df.withColumn("Posicion_Por_Provincia",rank().over(window))
+    provincia_ciclistas_kilometros6_df = provincia_ciclistas_kilometros6_df.withColumn("Tipo_Top_N_Ciclistas_Por_Provincia",lit("Promedio de Km/día"))
+	
+    provincia_ciclistas_kilometros7_df = provincia_ciclistas_kilometros6_df.filter(provincia_ciclistas_kilometros6_df.Posicion_Por_Provincia <= N)
+    provincia_ciclistas_kilometros7_df.show()
+
+    provincia_ciclistas_kilometros7_df = provincia_ciclistas_kilometros7_df.select(
+    col('Tipo_Top_N_Ciclistas_Por_Provincia'),
+    col('provincia'),
+    col('cedula'),
+    col('nombre_Completo'),
+    col('Promedio_Km_Por_Dia').alias('Valor'))  
+
+    provincia_ciclistas_kilometros8_df = provincia_ciclistas_kilometros_total_df.union(provincia_ciclistas_kilometros7_df)
+    provincia_ciclistas_kilometros8_df.show()
+
 
  
 programaPrincipal()
