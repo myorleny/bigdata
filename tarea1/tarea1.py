@@ -50,7 +50,7 @@ def obtener_topN_ciclistas_por_provincia_en_total_de_kilometros (ciclistas_kilom
         col('sum(TotalKilometros)').alias('TotalKilometros'))
     provincia_ciclistas_kilometros_total_df.show()
 
-    window = Window.partitionBy('provincia').orderBy(col('TotalKilometros').desc())
+    window = Window.partitionBy('provincia').orderBy(col('TotalKilometros').desc(),col('cedula').asc())
     provincia_ciclistas_kilometros_total_df = provincia_ciclistas_kilometros_total_df.withColumn("Posicion_Por_Provincia",rank().over(window))
     provincia_ciclistas_kilometros_total_df = provincia_ciclistas_kilometros_total_df.withColumn("Tipo_Top_N_Ciclistas_Por_Provincia",lit("Total de Km"))
 	
@@ -61,7 +61,8 @@ def obtener_topN_ciclistas_por_provincia_en_total_de_kilometros (ciclistas_kilom
     col('provincia'),
     col('cedula'),
     col('nombre_Completo'),
-    col('TotalKilometros').alias('Valor'))  
+    col('TotalKilometros').alias('Valor'),
+    col('Posicion_Por_Provincia'))  
 	
     return provincia_ciclistas_kilometros_total_df
 
@@ -89,7 +90,7 @@ def obtener_topN_ciclistas_por_provincia_en_promedio_de_kilometros_por_dia (cicl
     provincia_ciclistas_kilometros_promedio_df = provincia_ciclistas_kilometros_promedio_df.withColumn("Promedio_Km_Por_Dia",provincia_ciclistas_kilometros_promedio_df.TotalKilometros/provincia_ciclistas_kilometros_promedio_df.CantidadDias)
     provincia_ciclistas_kilometros_promedio_df.show()
 
-    window = Window.partitionBy('provincia').orderBy(col('Promedio_Km_Por_Dia').desc())
+    window = Window.partitionBy('provincia').orderBy(col('Promedio_Km_Por_Dia').desc(),col('cedula').asc())
     provincia_ciclistas_kilometros_promedio_df = provincia_ciclistas_kilometros_promedio_df.withColumn("Posicion_Por_Provincia",rank().over(window))
     provincia_ciclistas_kilometros_promedio_df = provincia_ciclistas_kilometros_promedio_df.withColumn("Tipo_Top_N_Ciclistas_Por_Provincia",lit("Promedio de Km/día"))
 	
@@ -101,7 +102,8 @@ def obtener_topN_ciclistas_por_provincia_en_promedio_de_kilometros_por_dia (cicl
     col('provincia'),
     col('cedula'),
     col('nombre_Completo'),
-    col('Promedio_Km_Por_Dia').alias('Valor'))  
+    col('Promedio_Km_Por_Dia').alias('Valor'),
+    col('Posicion_Por_Provincia'))  
 	
     return provincia_ciclistas_kilometros_promedio_df    
 
