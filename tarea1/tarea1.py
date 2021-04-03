@@ -51,9 +51,10 @@ def obtener_topN_ciclistas_por_provincia_en_total_de_kilometros (ciclistas_kilom
         col('sum(TotalKilometros)').alias('TotalKilometros'))
     #provincia_ciclistas_kilometros_total_df.show()
 
-    #particiona los datos por provincia, ordenados por TotalKilometros descendente y cedula ascendente
+    #particiona los datos por provincia, ordenados por TotalKilometros descendente y cedula ascendente, y posteriormente crea columna para asignarles una "posición"
     window = Window.partitionBy('provincia').orderBy(col('TotalKilometros').desc(),col('cedula').asc())
     provincia_ciclistas_kilometros_total_df = provincia_ciclistas_kilometros_total_df.withColumn("Posicion_Por_Provincia",rank().over(window))
+
     provincia_ciclistas_kilometros_total_df = provincia_ciclistas_kilometros_total_df.withColumn("Tipo_Top_N_Ciclistas_Por_Provincia",lit("Total de Km"))
 	
     #obtiene el top N
@@ -93,10 +94,13 @@ def obtener_topN_ciclistas_por_provincia_en_promedio_de_kilometros_por_dia (cicl
     provincia_ciclistas_kilometros_promedio_df = provincia_ciclistas_kilometros_promedio_df.withColumn("Promedio_Km_Por_Dia",provincia_ciclistas_kilometros_promedio_df.TotalKilometros/provincia_ciclistas_kilometros_promedio_df.CantidadDias)
     #provincia_ciclistas_kilometros_promedio_df.show()
 
+    #particiona los datos por provincia, ordenados por Promedio_Km_Por_Dia descendente y cedula ascendente, y posteriormente crea columna para asignarles una "posición"
     window = Window.partitionBy('provincia').orderBy(col('Promedio_Km_Por_Dia').desc(),col('cedula').asc())
     provincia_ciclistas_kilometros_promedio_df = provincia_ciclistas_kilometros_promedio_df.withColumn("Posicion_Por_Provincia",rank().over(window))
+
     provincia_ciclistas_kilometros_promedio_df = provincia_ciclistas_kilometros_promedio_df.withColumn("Tipo_Top_N_Ciclistas_Por_Provincia",lit("Promedio de Km/día"))
 	
+    #obtiene el top N
     provincia_ciclistas_kilometros_promedio_df = provincia_ciclistas_kilometros_promedio_df.filter(provincia_ciclistas_kilometros_promedio_df.Posicion_Por_Provincia <= N)
     #provincia_ciclistas_kilometros_promedio_df.show()
 
@@ -109,6 +113,13 @@ def obtener_topN_ciclistas_por_provincia_en_promedio_de_kilometros_por_dia (cicl
     col('Posicion_Por_Provincia'))  
 	
     return provincia_ciclistas_kilometros_promedio_df    
+
+# Une los dataframes que contienen el top N de ciclistas por provincia, en total de kilómetros y en promedio de kilómetros por día
+def unir_dataframes_Top_N_ciclistas_por_provincia(provincia_ciclistas_kilometros_total_df, provincia_ciclistas_kilometros_promedio_df):
+    
+    top_N_ciclistas_por_provincia = provincia_ciclistas_kilometros_total_df.union(provincia_ciclistas_kilometros_promedio_df)
+
+    return top_N_ciclistas_por_provincia
 
 def programaPrincipal():
 
@@ -147,21 +158,27 @@ def programaPrincipal():
 
     ciclista_actividad_ruta_df = join_dataframes(ciclista_df, ruta_df, actividad_df)
 
+    print("Dataframe que contiene el join de los 3 archivos: ciclista.csv, actividad.csv y ruta.csv:")
     ciclista_actividad_ruta_df.show()
 
     ciclistas_kilometros_df = obtener_kilometros_por_ciclista(ciclista_actividad_ruta_df)
 
-    print("ciclistas_kilometros_df")
+    print("Kilómetros recorridos por ciclista, por ruta, por provincia y por día:")
     ciclistas_kilometros_df.show()
 
+    #indica el top N de cilclistas por provincia que se quieren obtener
     N = 1
+
     provincia_ciclistas_kilometros_total_df = obtener_topN_ciclistas_por_provincia_en_total_de_kilometros (ciclistas_kilometros_df, N)
+    print("Top", N, "de ciclistas por provincia, en total de kilómetros:")
     provincia_ciclistas_kilometros_total_df.show()
 
     provincia_ciclistas_kilometros_promedio_df = obtener_topN_ciclistas_por_provincia_en_promedio_de_kilometros_por_dia (ciclistas_kilometros_df, N)
+    print("Top", N, "de ciclistas por provincia, en promedio de kilómetros por día:")
     provincia_ciclistas_kilometros_promedio_df.show()
     
-    top_N_ciclistas_por_provincia = provincia_ciclistas_kilometros_total_df.union(provincia_ciclistas_kilometros_promedio_df)
+    top_N_ciclistas_por_provincia = unir_dataframes_Top_N_ciclistas_por_provincia(provincia_ciclistas_kilometros_total_df, provincia_ciclistas_kilometros_promedio_df)
+    print("Top", N, "de ciclistas por provincia, tanto en total de kilómetros como en promedio de kilómetros por día:")
     top_N_ciclistas_por_provincia.show()
 
  
