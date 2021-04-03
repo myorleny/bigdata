@@ -9,7 +9,7 @@ spark = SparkSession.builder.appName("Read Transactions").getOrCreate()
 spark.sparkContext.setLogLevel('WARN')
 
 # Une los datos de los tres archivos
-def unir_dataframes(ciclista_df, ruta_df, actividad_df):
+def join_dataframes(ciclista_df, ruta_df, actividad_df):
     
     ciclista_actividad_df = ciclista_df.join(actividad_df, ciclista_df.cedula == actividad_df.cedula_Ciclista)
 
@@ -22,7 +22,7 @@ def obtener_kilometros_por_ciclista (ciclista_actividad_ruta_df):
     
     filter_df = ciclista_actividad_ruta_df.filter(ciclista_actividad_ruta_df.kilometros > 0)
     sum_df = filter_df.groupBy("cedula", "nombre_Completo", "codigo", "nombre_Ruta", "provincia", "fecha").sum("kilometros")
-    sum_df.show()
+    #sum_df.show()
 
     ciclistas_kilometros_df = \
         sum_df.select(
@@ -39,8 +39,9 @@ def obtener_kilometros_por_ciclista (ciclista_actividad_ruta_df):
 # Obtiene el top N de ciclistas por provincia, en total de kilómetros 
 def obtener_topN_ciclistas_por_provincia_en_total_de_kilometros (ciclistas_kilometros_df, N):
     
+    #obtiene el total de kilómetros por ciclista, agrupado por provincia, cedula y nombre_Completo
     provincia_ciclistas_kilometros_total_df = ciclistas_kilometros_df.groupBy("provincia", "cedula", "nombre_Completo").sum("TotalKilometros")
-    provincia_ciclistas_kilometros_total_df.show()
+    #provincia_ciclistas_kilometros_total_df.show()
 
     provincia_ciclistas_kilometros_total_df = \
     provincia_ciclistas_kilometros_total_df.select(
@@ -48,12 +49,14 @@ def obtener_topN_ciclistas_por_provincia_en_total_de_kilometros (ciclistas_kilom
         col('cedula'),
         col('nombre_Completo'),
         col('sum(TotalKilometros)').alias('TotalKilometros'))
-    provincia_ciclistas_kilometros_total_df.show()
+    #provincia_ciclistas_kilometros_total_df.show()
 
+    #particiona los datos por provincia, ordenados por TotalKilometros descendente y cedula ascendente
     window = Window.partitionBy('provincia').orderBy(col('TotalKilometros').desc(),col('cedula').asc())
     provincia_ciclistas_kilometros_total_df = provincia_ciclistas_kilometros_total_df.withColumn("Posicion_Por_Provincia",rank().over(window))
     provincia_ciclistas_kilometros_total_df = provincia_ciclistas_kilometros_total_df.withColumn("Tipo_Top_N_Ciclistas_Por_Provincia",lit("Total de Km"))
 	
+    #obtiene el top N
     provincia_ciclistas_kilometros_total_df = provincia_ciclistas_kilometros_total_df.filter(provincia_ciclistas_kilometros_total_df.Posicion_Por_Provincia <= N)
 
     provincia_ciclistas_kilometros_total_df = provincia_ciclistas_kilometros_total_df.select(
@@ -88,14 +91,14 @@ def obtener_topN_ciclistas_por_provincia_en_promedio_de_kilometros_por_dia (cicl
         col('CantidadDias'))
     #Agrega nueva columna que calcula el promedio de kilómetros por ciclista
     provincia_ciclistas_kilometros_promedio_df = provincia_ciclistas_kilometros_promedio_df.withColumn("Promedio_Km_Por_Dia",provincia_ciclistas_kilometros_promedio_df.TotalKilometros/provincia_ciclistas_kilometros_promedio_df.CantidadDias)
-    provincia_ciclistas_kilometros_promedio_df.show()
+    #provincia_ciclistas_kilometros_promedio_df.show()
 
     window = Window.partitionBy('provincia').orderBy(col('Promedio_Km_Por_Dia').desc(),col('cedula').asc())
     provincia_ciclistas_kilometros_promedio_df = provincia_ciclistas_kilometros_promedio_df.withColumn("Posicion_Por_Provincia",rank().over(window))
     provincia_ciclistas_kilometros_promedio_df = provincia_ciclistas_kilometros_promedio_df.withColumn("Tipo_Top_N_Ciclistas_Por_Provincia",lit("Promedio de Km/día"))
 	
     provincia_ciclistas_kilometros_promedio_df = provincia_ciclistas_kilometros_promedio_df.filter(provincia_ciclistas_kilometros_promedio_df.Posicion_Por_Provincia <= N)
-    provincia_ciclistas_kilometros_promedio_df.show()
+    #provincia_ciclistas_kilometros_promedio_df.show()
 
     provincia_ciclistas_kilometros_promedio_df = provincia_ciclistas_kilometros_promedio_df.select(
     col('Tipo_Top_N_Ciclistas_Por_Provincia'),
@@ -118,7 +121,7 @@ def programaPrincipal():
                             schema=ciclista_schema,
                             header=False)
 
-    ciclista_df.show()
+    #ciclista_df.show()
 
     ruta_schema = StructType([StructField('codigo', IntegerType()),
                             StructField('nombre_Ruta', StringType()),
@@ -129,7 +132,7 @@ def programaPrincipal():
                             schema=ruta_schema,
                             header=False)
 
-    ruta_df.show()
+    #ruta_df.show()
 
     actividad_schema = StructType([StructField('codigo_Ruta', IntegerType()),
                             StructField('cedula_Ciclista', IntegerType()),
@@ -140,9 +143,9 @@ def programaPrincipal():
                             schema=actividad_schema,
                             header=False)
 
-    actividad_df.show()    
+    #actividad_df.show()    
 
-    ciclista_actividad_ruta_df = unir_dataframes(ciclista_df, ruta_df, actividad_df)
+    ciclista_actividad_ruta_df = join_dataframes(ciclista_df, ruta_df, actividad_df)
 
     ciclista_actividad_ruta_df.show()
 
