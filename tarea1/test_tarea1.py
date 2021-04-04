@@ -1,8 +1,8 @@
-from .tarea1 import join_dataframes
-from .tarea1 import obtener_kilometros_por_ciclista
-from .tarea1 import obtener_topN_ciclistas_por_provincia_en_total_de_kilometros
-from .tarea1 import obtener_topN_ciclistas_por_provincia_en_promedio_de_kilometros_por_dia
-from .tarea1 import unir_dataframes_Top_N_ciclistas_por_provincia
+from .tarea1_funciones import join_dataframes
+from .tarea1_funciones import obtener_kilometros_por_ciclista
+from .tarea1_funciones import obtener_topN_ciclistas_por_provincia_en_total_de_kilometros
+from .tarea1_funciones import obtener_topN_ciclistas_por_provincia_en_promedio_de_kilometros_por_dia
+from .tarea1_funciones import unir_dataframes_Top_N_ciclistas_por_provincia
 
 # Pruebas para la función join_dataframes
 def test_join_normal_dataframes(spark_session):
