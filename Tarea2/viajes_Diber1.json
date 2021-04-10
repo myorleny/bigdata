@@ -1,0 +1,65 @@
+﻿{
+"identificador": "10000",
+"viajes": [
+		{
+			"codigo_postal_origen": "11504",
+			"codigo_postal_destino": "11501" ,
+			"kilometros": "2.8" ,
+			"precio_kilometro": "550"
+		},
+		{
+			"codigo_postal_origen": "10101",
+			"codigo_postal_destino": "60101" ,
+			"kilometros": "96.3" ,
+			"precio_kilometro": "300"
+		},
+		{
+			"codigo_postal_origen": "20101",
+			"codigo_postal_destino": "20201" ,
+			"kilometros": "53" ,
+			"precio_kilometro": "330"
+		},
+		{
+			"codigo_postal_origen": "20101",
+			"codigo_postal_destino": "20105" ,
+			"kilometros": "5" ,
+			"precio_kilometro": "600"
+		},
+		{
+			"codigo_postal_origen": "20302",
+			"codigo_postal_destino": "20105" ,
+			"kilometros": "38.5" ,
+			"precio_kilometro": "290"
+		},
+		{
+			"codigo_postal_origen": "11504",
+			"codigo_postal_destino": "20101" ,
+			"kilometros": "20" ,
+			"precio_kilometro": "800"
+		},
+		{
+			"codigo_postal_origen": "20301",
+			"codigo_postal_destino": "10101" ,
+			"kilometros": "50" ,
+			"precio_kilometro": "500"
+		},
+		{
+			"codigo_postal_origen": "20105",
+			"codigo_postal_destino": "10101" ,
+			"kilometros": "28" ,
+			"precio_kilometro": "500"
+		},
+		{
+			"codigo_postal_origen": "20302",
+			"codigo_postal_destino": "20301" ,
+			"kilometros": "7.2" ,
+			"precio_kilometro": "550"
+		},
+		{
+			"codigo_postal_origen": "20301",
+			"codigo_postal_destino": "20302" ,
+			"kilometros": "7.2" ,
+			"precio_kilometro": "550"
+		}										
+]
+}
