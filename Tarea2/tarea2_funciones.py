@@ -49,11 +49,11 @@ def obtener_total_viajes_por_codigo_postal_destino (viajes_didier_df):
 
     return total_viajes_por_codigo_postal_destino_df    
 
-def unir_dataframes_total_viajes_por_codigo_postal_origen_destino(total_viajes_por_codigo_postal_origen_df, total_viajes_por_codigo_postal_destino_df):
+def unir_dataframes(primer_df, segundo_df):
     
-    total_viajes_por_codigo_postal_df = total_viajes_por_codigo_postal_origen_df.union(total_viajes_por_codigo_postal_destino_df)
+    total_df = primer_df.union(segundo_df)
 
-    return total_viajes_por_codigo_postal_df
+    return total_df
 
 def obtener_total_ingresos_por_codigo_postal_origen (viajes_didier_df):
     
@@ -73,7 +73,7 @@ def obtener_total_ingresos_por_codigo_postal_origen (viajes_didier_df):
     total_ingresos_por_codigo_postal_origen_df = total_ingresos_por_codigo_postal_origen_df.select(
         col("codigo_postal_origen").alias("Codigo_Postal"),
         col("Origen_Destino"),
-        col("sum(Ingreso_por_Viaje)").alias("Cantidad_total_ingresos"))
+        col("sum(Ingreso_por_Viaje)").alias("Cantidad_Total_Ingresos"))
 
     total_ingresos_por_codigo_postal_origen_df = total_ingresos_por_codigo_postal_origen_df.orderBy(col("Codigo_Postal").asc())
 
@@ -96,7 +96,7 @@ def obtener_total_ingresos_por_codigo_postal_destino (viajes_didier_df):
     total_ingresos_por_codigo_postal_destino_df = total_ingresos_por_codigo_postal_destino_df.select(
         col("codigo_postal_destino").alias("Codigo_Postal"),
         col("Origen_Destino"),
-        col("sum(Ingreso_por_Viaje)").alias("Cantidad_total_ingresos"))
+        col("sum(Ingreso_por_Viaje)").alias("Cantidad_Total_Ingresos"))
 
     total_ingresos_por_codigo_postal_destino_df = total_ingresos_por_codigo_postal_destino_df.orderBy(col("Codigo_Postal").asc())
 

@@ -50,7 +50,7 @@ def main(args):
     total_viajes_por_codigo_postal_origen_df.show()
     total_viajes_por_codigo_postal_destino_df = tarea2_funciones.obtener_total_viajes_por_codigo_postal_destino (viajes_didier_df)
     total_viajes_por_codigo_postal_destino_df.show()   
-    total_viajes_por_codigo_postal_df = tarea2_funciones.unir_dataframes_total_viajes_por_codigo_postal_origen_destino(total_viajes_por_codigo_postal_origen_df, total_viajes_por_codigo_postal_destino_df) 
+    total_viajes_por_codigo_postal_df = tarea2_funciones.unir_dataframes(total_viajes_por_codigo_postal_origen_df, total_viajes_por_codigo_postal_destino_df) 
     total_viajes_por_codigo_postal_df.show()
     total_viajes_por_codigo_postal_df.coalesce(1).write.format('csv').option('header',True).mode('overwrite').option('sep',',').save("total_viajes")
 
@@ -58,7 +58,7 @@ def main(args):
     total_ingresos_por_codigo_postal_origen_df.show()
     total_ingresos_por_codigo_postal_destino_df = tarea2_funciones.obtener_total_ingresos_por_codigo_postal_destino (viajes_didier_df)
     total_ingresos_por_codigo_postal_destino_df.show() 
-    total_ingresos_por_codigo_postal_df = tarea2_funciones.unir_dataframes_total_ingresos_por_codigo_postal_origen_destino(total_ingresos_por_codigo_postal_origen_df, total_ingresos_por_codigo_postal_destino_df)   
+    total_ingresos_por_codigo_postal_df = tarea2_funciones.unir_dataframes(total_ingresos_por_codigo_postal_origen_df, total_ingresos_por_codigo_postal_destino_df)   
     total_ingresos_por_codigo_postal_df.show()
     total_ingresos_por_codigo_postal_df.coalesce(1).write.format('csv').option('header',True).mode('overwrite').option('sep',',').save("total_ingresos")
 

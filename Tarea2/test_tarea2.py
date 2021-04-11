@@ -1,9 +1,8 @@
 from .tarea2_funciones import obtener_total_viajes_por_codigo_postal_origen
 from .tarea2_funciones import obtener_total_viajes_por_codigo_postal_destino
-from .tarea2_funciones import unir_dataframes_total_viajes_por_codigo_postal_origen_destino
+from .tarea2_funciones import unir_dataframes
 from .tarea2_funciones import obtener_total_ingresos_por_codigo_postal_origen
 from .tarea2_funciones import obtener_total_ingresos_por_codigo_postal_destino
-from .tarea2_funciones import unir_dataframes_total_ingresos_por_codigo_postal_origen_destino
 
 #Pruebas para la función obtener_total_viajes_por_codigo_postal_origen
 
@@ -332,7 +331,7 @@ def test_total_viajes_por_codigo_postal_destino_invalido(spark_session):
 
     assert actual_ds.collect() == esperado_ds.collect()  
 
-# Pruebas para la función unir_dataframes_total_viajes_por_codigo_postal_origen_destino
+# Pruebas para la función unir_dataframes 
 def test_unir_dataframes_total_viajes_por_codigo_postal_origen_destino_verifica_datos(spark_session):
     total_viajes_por_codigo_postal_origen_data = [(11504, 'Origen', 2),
                                                 (20101, 'Origen', 3),
@@ -348,7 +347,7 @@ def test_unir_dataframes_total_viajes_por_codigo_postal_origen_destino_verifica_
                                               ['Codigo_Postal', 'Origen_Destino', 'Cantidad_Total_Viajes'])
                                                 
     
-    actual_ds = unir_dataframes_total_viajes_por_codigo_postal_origen_destino(total_viajes_por_codigo_postal_origen_ds, total_viajes_por_codigo_postal_destino_ds)
+    actual_ds = unir_dataframes(total_viajes_por_codigo_postal_origen_ds, total_viajes_por_codigo_postal_destino_ds)
 
     esperado_ds = spark_session.createDataFrame(
         [
@@ -380,7 +379,7 @@ def test_unir_dataframes_total_viajes_por_codigo_postal_origen_destino_verifica_
                                               ['Codigo_Postal', 'Origen_Destino', 'Cantidad_Total_Viajes'])
                                                 
     
-    actual_ds = unir_dataframes_total_viajes_por_codigo_postal_origen_destino(total_viajes_por_codigo_postal_origen_ds, total_viajes_por_codigo_postal_destino_ds)
+    actual_ds = unir_dataframes(total_viajes_por_codigo_postal_origen_ds, total_viajes_por_codigo_postal_destino_ds)
     actual = actual_ds.count()
 
     esperado = total_viajes_por_codigo_postal_origen_ds.count() + total_viajes_por_codigo_postal_destino_ds.count()
@@ -408,7 +407,7 @@ def test_total_ingresos_por_codigo_postal_origen_1_viaje_por_codigo_postal(spark
             (20101, 'Origen', 3000.0),
             (20302, 'Origen', 11165.0),
         ],
-        ['Codigo_Postal', 'Origen_Destino', 'Cantidad_Total_Viajes'])
+        ['Codigo_Postal', 'Origen_Destino', 'Cantidad_Total_Ingresos'])
 
     esperado_ds.show()
     actual_ds.show()
@@ -439,7 +438,7 @@ def test_total_ingresos_por_codigo_postal_origen_varios_viajes_por_codigo_postal
             (20101, 'Origen', 79447.0),
             (20302, 'Origen', 11165.0),
         ],
-        ['Codigo_Postal', 'Origen_Destino', 'Cantidad_Total_Viajes'])
+        ['Codigo_Postal', 'Origen_Destino', 'Cantidad_Total_Ingresos'])
 
     esperado_ds.show()
     actual_ds.show()
@@ -463,7 +462,7 @@ def test_total_ingresos_por_codigo_postal_origen_mismo_viaje_varias_veces(spark_
         [
             (20101, 'Origen', 9000.0),
         ],
-        ['Codigo_Postal', 'Origen_Destino', 'Cantidad_Total_Viajes'])
+        ['Codigo_Postal', 'Origen_Destino', 'Cantidad_Total_Ingresos'])
 
     esperado_ds.show()
     actual_ds.show()
@@ -491,7 +490,7 @@ def test_total_ingresos_por_codigo_postal_origen_kilometros_negativos_cero_null(
             (20101, 'Origen', 76447.0),
             (20302, 'Origen', 11165.0),
         ],
-        ['Codigo_Postal', 'Origen_Destino', 'Cantidad_Total_Viajes'])
+        ['Codigo_Postal', 'Origen_Destino', 'Cantidad_Total_Ingresos'])
 
     esperado_ds.show()
     actual_ds.show()
@@ -519,7 +518,7 @@ def test_total_ingresos_por_codigo_postal_origen_precioKm_negativo_cero_null(spa
             (20101, 'Origen', 76447.0),
             (20302, 'Origen', 11165.0),
         ],
-        ['Codigo_Postal', 'Origen_Destino', 'Cantidad_Total_Viajes'])
+        ['Codigo_Postal', 'Origen_Destino', 'Cantidad_Total_Ingresos'])
 
     esperado_ds.show()
     actual_ds.show()
@@ -543,7 +542,7 @@ def test_total_ingresos_por_codigo_postal_origen_invalido(spark_session):
         [
             (20101, 'Origen', 3000.0),
         ],
-        ['Codigo_Postal', 'Origen_Destino', 'Cantidad_Total_Viajes'])
+        ['Codigo_Postal', 'Origen_Destino', 'Cantidad_Total_Ingresos'])
 
     esperado_ds.show()
     actual_ds.show()
@@ -571,7 +570,7 @@ def test_total_ingresos_por_codigo_postal_destino_1_viaje_por_codigo_postal(spar
             (20105, 'Destino', 3000.0),
             (20106, 'Destino', 11165.0),
         ],
-        ['Codigo_Postal', 'Origen_Destino', 'Cantidad_Total_Viajes'])
+        ['Codigo_Postal', 'Origen_Destino', 'Cantidad_Total_Ingresos'])
 
     esperado_ds.show()
     actual_ds.show()
@@ -601,7 +600,7 @@ def test_total_ingresos_por_codigo_postal_destino_varios_viajes_por_codigo_posta
             (20101, 'Destino', 16000.0),
             (20105, 'Destino', 14165.0),
         ],
-        ['Codigo_Postal', 'Origen_Destino', 'Cantidad_Total_Viajes'])
+        ['Codigo_Postal', 'Origen_Destino', 'Cantidad_Total_Ingresos'])
 
     esperado_ds.show()
     actual_ds.show()
@@ -625,7 +624,7 @@ def test_total_ingresos_por_codigo_postal_destino_mismo_viaje_varias_veces(spark
         [
             (20105, 'Destino', 9000.0),
         ],
-        ['Codigo_Postal', 'Origen_Destino', 'Cantidad_Total_Viajes'])
+        ['Codigo_Postal', 'Origen_Destino', 'Cantidad_Total_Ingresos'])
 
     esperado_ds.show()
     actual_ds.show()
@@ -654,7 +653,7 @@ def test_total_ingresos_por_codigo_postal_destino_kilometros_negativos_cero_null
             (20105, 'Destino', 11165.0),
             (60101, 'Destino', 65520.0),
         ],
-        ['Codigo_Postal', 'Origen_Destino', 'Cantidad_Total_Viajes'])
+        ['Codigo_Postal', 'Origen_Destino', 'Cantidad_Total_Ingresos'])
 
     esperado_ds.show()
     actual_ds.show()
@@ -683,7 +682,7 @@ def test_total_ingresos_por_codigo_postal_destino_precioKm_negativo_cero_null(sp
             (20105, 'Destino', 11165.0),
             (60101, 'Destino', 65520.0),
         ],
-        ['Codigo_Postal', 'Origen_Destino', 'Cantidad_Total_Viajes'])
+        ['Codigo_Postal', 'Origen_Destino', 'Cantidad_Total_Ingresos'])
 
     esperado_ds.show()
     actual_ds.show()
@@ -707,10 +706,65 @@ def test_total_ingresos_por_codigo_postal_destino_invalido(spark_session):
         [
             (20101, 'Destino', 3000.0), 
         ],
-        ['Codigo_Postal', 'Origen_Destino', 'Cantidad_Total_Viajes'])
+        ['Codigo_Postal', 'Origen_Destino', 'Cantidad_Total_Ingresos'])
 
     esperado_ds.show()
     actual_ds.show()
 
     assert actual_ds.collect() == esperado_ds.collect()      
+
+# Pruebas para la función unir_dataframes 
+def test_unir_dataframes_total_ingresos_por_codigo_postal_origen_destino_verifica_datos(spark_session):
+    total_ingresos_por_codigo_postal_origen_data = [(11504, 'Origen', 17000.0),
+                                                (20101, 'Origen', 79447.0),
+                                                (20302, 'Origen', 11165.0)]
+
+    total_ingresos_por_codigo_postal_origen_ds = spark_session.createDataFrame(total_ingresos_por_codigo_postal_origen_data,
+                                              ['Codigo_Postal', 'Origen_Destino', 'Cantidad_Total_Ingresos'])
+                                                
+    total_ingresos_por_codigo_postal_destino_data = [ (11501, 'Destino', 11927.0),
+                                                    (20101, 'Destino', 30165.0)]
+
+    total_ingresos_por_codigo_postal_destino_ds = spark_session.createDataFrame(total_ingresos_por_codigo_postal_destino_data,
+                                              ['Codigo_Postal', 'Origen_Destino', 'Cantidad_Total_Ingresos'])
+                                                
+    
+    actual_ds = unir_dataframes(total_ingresos_por_codigo_postal_origen_ds, total_ingresos_por_codigo_postal_destino_ds)
+
+    esperado_ds = spark_session.createDataFrame(
+        [
+            (11504, 'Origen', 17000.0),
+            (20101, 'Origen', 79447.0),
+            (20302, 'Origen', 11165.0),
+            (11501, 'Destino', 11927.0),
+            (20101, 'Destino', 30165.0),
+        ],
+        ['Codigo_Postal', 'Origen_Destino', 'Cantidad_Total_Ingresos'])
+
+    esperado_ds.show()
+    actual_ds.show()
+
+    assert actual_ds.collect() == esperado_ds.collect()  
+
+def test_unir_dataframes_total_ingresos_por_codigo_postal_origen_destino_verifica_cantidad_registros(spark_session):
+    total_ingresos_por_codigo_postal_origen_data = [(11504, 'Origen', 17000.0),
+                                                (20101, 'Origen', 79447.0),
+                                                (20302, 'Origen', 11165.0)]
+
+    total_ingresos_por_codigo_postal_origen_ds = spark_session.createDataFrame(total_ingresos_por_codigo_postal_origen_data,
+                                              ['Codigo_Postal', 'Origen_Destino', 'Cantidad_Total_Ingresos'])
+                                                
+    total_ingresos_por_codigo_postal_destino_data = [ (11501, 'Destino', 11927.0),
+                                                    (20101, 'Destino', 30165.0)]
+
+    total_ingresos_por_codigo_postal_destino_ds = spark_session.createDataFrame(total_ingresos_por_codigo_postal_destino_data,
+                                              ['Codigo_Postal', 'Origen_Destino', 'Cantidad_Total_Ingresos'])
+                                                
+    
+    actual_ds = unir_dataframes(total_ingresos_por_codigo_postal_origen_ds, total_ingresos_por_codigo_postal_destino_ds)
+    actual = actual_ds.count()
+
+    esperado = total_ingresos_por_codigo_postal_origen_ds.count() + total_ingresos_por_codigo_postal_destino_ds.count()
+
+    assert actual == esperado       
          
