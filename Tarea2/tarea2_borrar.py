@@ -288,7 +288,7 @@ def test_metrica_percentil_90_con_redondeo(spark_session):
 
     assert actual_ds.collect() == esperado_ds.collect()     
 
-def test_metrica_percentil_110(spark_session):
+def test_metrica_percentil_negativo(spark_session):
     viajes_didier_data = [(10000, 20101, 20105, 5.0, 600),
                         (10000, 20101, 20105, 5.0, 600),
                         (10001, 20302, 20105, 38.5, 290),
@@ -309,11 +309,11 @@ def test_metrica_percentil_110(spark_session):
 
     viajes_didier_ds.show()
 
-    actual_ds = calcular_metrica_percentil(viajes_didier_ds,110)
+    actual_ds = calcular_metrica_percentil(viajes_didier_ds,-1)
 
     esperado_ds = spark_session.createDataFrame(
         [
-            ('percentil_100', 81778.5),
+            ('percentil_0', 1000.0),
         ],
         ['Tipo_de_Metrica', 'Valor'])
 

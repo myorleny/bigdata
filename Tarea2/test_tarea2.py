@@ -1226,7 +1226,41 @@ def test_metrica_percentil_110(spark_session):
     esperado_ds.show()
     actual_ds.show()
 
-    assert actual_ds.collect() == esperado_ds.collect()       
+    assert actual_ds.collect() == esperado_ds.collect()   
+
+def test_metrica_percentil_negativo(spark_session):
+    viajes_didier_data = [(10000, 20101, 20105, 5.0, 600),
+                        (10000, 20101, 20105, 5.0, 600),
+                        (10001, 20302, 20105, 38.5, 290),
+                        (10002, 11504, 60101, 100.8, 800),
+                        (10002, 11504, 10101, 2.3, 495),
+                        (10003, 20101, 60101, 90.8, 650),
+                        (10004, 20101, 11501, 22.3, 490),
+                        (10005, 11504, 11501, 2.0, 500),
+                        (10006, 20102, 11502, 22.3, 490),
+                        (10007, 20103, 11503, 23.4, 500),
+                        (10008, 20104, 11504, 24.5, 510),
+                        (10009, 20105, 11505, 25.6, 520)
+                        ] 
+                                    
+    viajes_didier_ds = spark_session.createDataFrame(viajes_didier_data,
+                                              ['identificador', 'codigo_postal_origen', 'codigo_postal_destino', 'kilometros', 'precio_kilometro'])
+                                                
+
+    viajes_didier_ds.show()
+
+    actual_ds = calcular_metrica_percentil(viajes_didier_ds,-1)
+
+    esperado_ds = spark_session.createDataFrame(
+        [
+            ('percentil_0', 1000.0),
+        ],
+        ['Tipo_de_Metrica', 'Valor'])
+
+    esperado_ds.show()
+    actual_ds.show()
+
+    assert actual_ds.collect() == esperado_ds.collect()           
 
 #Pruebas para la función obtener_metrica_codigo_postal_origen_con_mas_ingresos
 
