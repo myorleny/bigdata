@@ -3,30 +3,37 @@ from pyspark.sql.types import (IntegerType, FloatType, StructField,
                                StructType, TimestampType, StringType, DateType)
 from pyspark.sql.functions import col, date_format, udf, rank, lit                              
 from pyspark.sql.window import Window
+ 
+from pyspark.sql.functions import explode                               
+
+
 
 spark = SparkSession.builder.appName("Viajes").getOrCreate()
 spark.sparkContext.setLogLevel('WARN')
 
-def obtener_total_ingresos_por_codigo_postal_destino (viajes_didier_df):
+import sys
+
+def CargarArchivosJSON():
+    args = sys.argv
+    #Crea un dataframe para ir acumulando los viajes de cada persona
+    viajes_schema = StructType([StructField('identificador', IntegerType()),
+                            StructField('codigo_postal_origen', IntegerType()),
+                            StructField('codigo_postal_destino', IntegerType()),
+                            StructField('kilometros', FloatType()),
+                            StructField('precio_kilometro', FloatType()),
+                            ])
+
+    viajes_didier_df = spark.createDataFrame([], viajes_schema)
     
-    viajes_didier_df = viajes_didier_df.withColumn("Ingreso_por_Viaje",col('kilometros')*col('precio_kilometro'))
+    #Carga los datos de cada identificador en el dataframe recién creado
+    for arg in args:
+        if arg[-5:] == ".json":
+            print(arg)
+            viajes_por_persona_df = spark.read.option("multiline","true").json(arg)
+            viajes_por_persona_df = viajes_por_persona_df.withColumn("viajes", explode(viajes_por_persona_df.viajes))
+            #viajes_por_persona_df.show()
+            viajes_didier_df = viajes_didier_df.union(viajes_por_persona_df.select("identificador", "viajes.codigo_postal_origen", "viajes.codigo_postal_destino", "viajes.kilometros","viajes.precio_kilometro"))
+            
     viajes_didier_df.show()
 
-    total_ingresos_por_codigo_postal_destino_df = viajes_didier_df.groupBy("codigo_postal_destino").sum("Ingreso_por_Viaje")
-
-    total_ingresos_por_codigo_postal_destino_df = total_ingresos_por_codigo_postal_destino_df.withColumn("Origen_Destino",lit("Destino"))
-
-    total_ingresos_por_codigo_postal_destino_df = total_ingresos_por_codigo_postal_destino_df.select(
-        col('codigo_postal_destino').alias('Codigo_Postal'),
-        col('Origen_Destino'),
-        col('sum(Ingreso_por_Viaje)').alias('Cantidad_total_ingresos'))
-
-    total_ingresos_por_codigo_postal_destino_df = total_ingresos_por_codigo_postal_destino_df.orderBy(col('Codigo_Postal').asc())
-
-    return total_ingresos_por_codigo_postal_destino_df   
-
-def unir_dataframes_total_ingresos_por_codigo_postal_origen_destino(total_ingresos_por_codigo_postal_origen_df, total_ingresos_por_codigo_postal_destino_df):
-    
-    total_ingresos_por_codigo_postal_df = total_ingresos_por_codigo_postal_origen_df.union(total_ingresos_por_codigo_postal_destino_df)
-
-    return total_ingresos_por_codigo_postal_df
+CargarArchivosJSON()    

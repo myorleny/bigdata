@@ -2,19 +2,19 @@
 "identificador": "10000",
 "viajes": [
 		{
-			"codigo_postal_origen": "11504",
+			"codigo_postal_origen": "",
 			"codigo_postal_destino": "11501" ,
 			"kilometros": "2.8" ,
 			"precio_kilometro": "550"
 		},
 		{
-			"codigo_postal_origen": "10101",
+			"codigo_postal_origen": "",
 			"codigo_postal_destino": "60101" ,
 			"kilometros": "96.3" ,
 			"precio_kilometro": "300"
 		},
 		{
-			"codigo_postal_origen": "20101",
+			"codigo_postal_origen": "",
 			"codigo_postal_destino": "20201" ,
 			"kilometros": "53" ,
 			"precio_kilometro": "330"

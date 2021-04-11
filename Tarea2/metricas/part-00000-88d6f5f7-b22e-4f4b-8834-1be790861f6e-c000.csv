@@ -1,0 +1,8 @@
+Tipo_de_Metrica,Valor
+persona_con_mas_kilometros,10000
+persona_con_mas_ingresos,10000
+percentil_25,[125005.0]
+percentil_50,[125005.0]
+percentil_75,[125005.0]
+codigo_postal_origen_con_mas_ingresos,""
+codigo_postal_destino_con_mas_ingresos,10101

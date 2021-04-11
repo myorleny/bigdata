@@ -5,7 +5,6 @@ from pyspark.sql.functions import col, date_format, udf, rank, lit
 from pyspark.sql.functions import explode                               
 
 import tarea2_funciones
-import tarea2_funciones2
 
 import argparse
 import sys
@@ -14,7 +13,7 @@ spark = SparkSession.builder.appName("Viajes").getOrCreate()
 spark.sparkContext.setLogLevel('WARN')
 
 def CargarArchivosJSON(args):
-    #Crea un dataframe para ir acumulando las ventas de cada caja
+    #Crea un dataframe para ir acumulando los viajes de cada persona
     viajes_schema = StructType([StructField('identificador', IntegerType()),
                             StructField('codigo_postal_origen', IntegerType()),
                             StructField('codigo_postal_destino', IntegerType()),
@@ -47,13 +46,13 @@ def main(args):
     viajes_didier_df = CargarArchivosJSON(args)
     viajes_didier_df.show()
 
-    # total_viajes_por_codigo_postal_origen_df = tarea2_funciones.obtener_total_viajes_por_codigo_postal_origen (viajes_didier_df)
-    # total_viajes_por_codigo_postal_origen_df.show()
-    # total_viajes_por_codigo_postal_destino_df = tarea2_funciones.obtener_total_viajes_por_codigo_postal_destino (viajes_didier_df)
-    # total_viajes_por_codigo_postal_destino_df.show()   
-    # total_viajes_por_codigo_postal_df = tarea2_funciones.unir_dataframes_total_viajes_por_codigo_postal_origen_destino(total_viajes_por_codigo_postal_origen_df, total_viajes_por_codigo_postal_destino_df) 
-    # total_viajes_por_codigo_postal_df.show()
-    # total_viajes_por_codigo_postal_df.coalesce(1).write.format('csv').option('header',True).mode('overwrite').option('sep',',').save("total_viajes")
+    total_viajes_por_codigo_postal_origen_df = tarea2_funciones.obtener_total_viajes_por_codigo_postal_origen (viajes_didier_df)
+    total_viajes_por_codigo_postal_origen_df.show()
+    total_viajes_por_codigo_postal_destino_df = tarea2_funciones.obtener_total_viajes_por_codigo_postal_destino (viajes_didier_df)
+    total_viajes_por_codigo_postal_destino_df.show()   
+    total_viajes_por_codigo_postal_df = tarea2_funciones.unir_dataframes_total_viajes_por_codigo_postal_origen_destino(total_viajes_por_codigo_postal_origen_df, total_viajes_por_codigo_postal_destino_df) 
+    total_viajes_por_codigo_postal_df.show()
+    total_viajes_por_codigo_postal_df.coalesce(1).write.format('csv').option('header',True).mode('overwrite').option('sep',',').save("total_viajes")
 
     # total_ingresos_por_codigo_postal_origen_df = tarea2_funciones.obtener_total_ingresos_por_codigo_postal_origen (viajes_didier_df)
     # total_ingresos_por_codigo_postal_origen_df.show()
@@ -63,13 +62,32 @@ def main(args):
     # total_ingresos_por_codigo_postal_df.show()
     # total_ingresos_por_codigo_postal_df.coalesce(1).write.format('csv').option('header',True).mode('overwrite').option('sep',',').save("total_ingresos")
 
-    persona_con_mas_kilometros_df = tarea2_funciones.obtener_persona_con_mas_kilometros(viajes_didier_df)
-    persona_con_mas_kilometros_df.show()
+    metrica_persona_con_mas_kilometros_df = tarea2_funciones.obtener_metrica_persona_con_mas_kilometros(viajes_didier_df)
+    metrica_persona_con_mas_kilometros_df.show()
 
-    destinopersona_con_mas_ingresos_df = tarea2_funciones.obtener_persona_con_mas_ingresos(viajes_didier_df)
-    destinopersona_con_mas_ingresos_df.show()    
+    metrica_persona_con_mas_ingresos_df = tarea2_funciones.obtener_metrica_persona_con_mas_ingresos(viajes_didier_df)
+    metrica_persona_con_mas_ingresos_df.show()  
 
+    metrica_valor_percentil_25_df = tarea2_funciones.calcular_metrica_percentil (viajes_didier_df, 25)
+    metrica_valor_percentil_25_df.show()      
 
+    metrica_valor_percentil_50_df = tarea2_funciones.calcular_metrica_percentil (viajes_didier_df, 50)
+    metrica_valor_percentil_50_df.show()    
+
+    metrica_valor_percentil_75_df = tarea2_funciones.calcular_metrica_percentil (viajes_didier_df, 75)
+    metrica_valor_percentil_75_df.show()   
+
+    metrica_codigo_postal_origen_con_mas_ingresos_df = tarea2_funciones.obtener_metrica_codigo_postal_origen_con_mas_ingresos (viajes_didier_df)
+    metrica_codigo_postal_origen_con_mas_ingresos_df.show()    
+
+    metrica_codigo_postal_destino_con_mas_ingresos_df = tarea2_funciones.obtener_metrica_codigo_postal_destino_con_mas_ingresos (viajes_didier_df)
+    metrica_codigo_postal_destino_con_mas_ingresos_df.show()
+
+    metricas_df = tarea2_funciones.unir_dataframes_metricas(metrica_persona_con_mas_kilometros_df, metrica_persona_con_mas_ingresos_df, metrica_valor_percentil_25_df, metrica_valor_percentil_50_df, metrica_valor_percentil_75_df, metrica_codigo_postal_origen_con_mas_ingresos_df, metrica_codigo_postal_destino_con_mas_ingresos_df)
+    metricas_df.show()  
+    metricas_df.coalesce(1).write.format('csv').option('header',True).mode('overwrite').option('sep',',').save("metricas")  
+
+ 
 if __name__ == '__main__':
     import sys
     sys.exit(main(sys.argv))
