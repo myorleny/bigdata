@@ -11,38 +11,13 @@ import sys
 spark = SparkSession.builder.appName("Viajes").getOrCreate()
 spark.sparkContext.setLogLevel('WARN')
 
-def CargarArchivosJSON(args):
-    
-    #Crea un dataframe 
-    viajes_schema = StructType([StructField('identificador', IntegerType()),
-                            StructField('codigo_postal_origen', IntegerType()),
-                            StructField('codigo_postal_destino', IntegerType()),
-                            StructField('kilometros', FloatType()),
-                            StructField('precio_kilometro', FloatType()),
-                            ])
 
-    viajes_didier_df = spark.createDataFrame([], viajes_schema)
-    
-    #Carga los viajes de cada persona en el dataframe recién creado
-    archivosCargados = 0
-    for arg in args:
-        if arg[-5:] == ".json":
-            print(arg)
-            viajes_por_persona_df = spark.read.option("multiline","true").json(arg)
-            viajes_por_persona_df = viajes_por_persona_df.withColumn("viajes", explode(viajes_por_persona_df.viajes))
-            viajes_didier_df = viajes_didier_df.union(viajes_por_persona_df.select("identificador", "viajes.codigo_postal_origen", "viajes.codigo_postal_destino", "viajes.kilometros","viajes.precio_kilometro"))
-            archivosCargados = archivosCargados + 1
+def programaPrincipal():
 
-    if archivosCargados == 0:
-        print("No se encontro ningun archivo .JSON")
-        exit()
+    args = sys.argv
 
-    return viajes_didier_df
-
-
-def main(args):
     #llama a la función que carga los archivos .json en un dataframe
-    viajes_didier_df = CargarArchivosJSON(args)
+    viajes_didier_df = tarea2_funciones.cargar_archivos_json(args)
     
     #llama a las funciones para obtener el total de viajes por código postal tanto origen como destino
     total_viajes_por_codigo_postal_origen_df = tarea2_funciones.obtener_total_viajes_por_codigo_postal_origen (viajes_didier_df)
@@ -75,6 +50,4 @@ def main(args):
     metricas_df.coalesce(1).write.format('csv').option('header',True).mode('overwrite').option('sep',',').save("metricas")  
 
  
-if __name__ == '__main__':
-    import sys
-    sys.exit(main(sys.argv))
+programaPrincipal()
