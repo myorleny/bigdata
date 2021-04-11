@@ -12,7 +12,7 @@ def obtener_total_viajes_por_codigo_postal_origen (viajes_didier_df):
     #excluye los registros con kilómetros o precio_kilometro en 0, negativo o en null
     viajes_didier_df = viajes_didier_df.filter(viajes_didier_df.kilometros > 0)
     viajes_didier_df = viajes_didier_df.filter(viajes_didier_df.precio_kilometro > 0)
-    #excluye códigos postales origen sin datos (por ejemplo en blanco)
+    #excluye códigos postales origen inválidos (por ejemplo en null)
     viajes_didier_df = viajes_didier_df.filter(viajes_didier_df.codigo_postal_origen > 0)
     
     total_viajes_por_codigo_postal_origen_df = viajes_didier_df.groupBy("codigo_postal_origen").count()
@@ -33,7 +33,7 @@ def obtener_total_viajes_por_codigo_postal_destino (viajes_didier_df):
     #excluye los registros con kilómetros o precio_kilometro en 0, negativo o en null
     viajes_didier_df = viajes_didier_df.filter(viajes_didier_df.kilometros > 0)
     viajes_didier_df = viajes_didier_df.filter(viajes_didier_df.precio_kilometro > 0)
-    #excluye códigos postales destino sin datos (por ejemplo en blanco)
+    #excluye códigos postales destino inválidos (por ejemplo en null)
     viajes_didier_df = viajes_didier_df.filter(viajes_didier_df.codigo_postal_destino > 0)
 
     total_viajes_por_codigo_postal_destino_df = viajes_didier_df.groupBy("codigo_postal_destino").count()
@@ -60,6 +60,8 @@ def obtener_total_ingresos_por_codigo_postal_origen (viajes_didier_df):
     #excluye los registros con kilómetros o precio_kilometro en 0, negativo o en null
     viajes_didier_df = viajes_didier_df.filter(viajes_didier_df.kilometros > 0)
     viajes_didier_df = viajes_didier_df.filter(viajes_didier_df.precio_kilometro > 0)
+    #excluye códigos postales origen inválidos (por ejemplo en null)
+    viajes_didier_df = viajes_didier_df.filter(viajes_didier_df.codigo_postal_origen > 0)    
 
     viajes_didier_df = viajes_didier_df.withColumn("Ingreso_por_Viaje",col("kilometros")*col("precio_kilometro"))
     #viajes_didier_df.show()
@@ -82,9 +84,10 @@ def obtener_total_ingresos_por_codigo_postal_destino (viajes_didier_df):
     #excluye los registros con kilómetros o precio_kilometro en 0, negativos o en null
     viajes_didier_df = viajes_didier_df.filter(viajes_didier_df.kilometros > 0)
     viajes_didier_df = viajes_didier_df.filter(viajes_didier_df.precio_kilometro > 0)
+    #excluye códigos postales destino inválidos (por ejemplo en null)
+    viajes_didier_df = viajes_didier_df.filter(viajes_didier_df.codigo_postal_destino > 0)
 
     viajes_didier_df = viajes_didier_df.withColumn("Ingreso_por_Viaje",col("kilometros")*col("precio_kilometro"))
-    viajes_didier_df.show()
 
     total_ingresos_por_codigo_postal_destino_df = viajes_didier_df.groupBy("codigo_postal_destino").sum("Ingreso_por_Viaje")
 
