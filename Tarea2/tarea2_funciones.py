@@ -23,7 +23,6 @@ def cargar_archivos_json(args):
     archivosCargados = 0
     for arg in args:
         if arg[-5:] == ".json":
-            print(arg)
             viajes_por_persona_df = spark.read.option("multiline","true").json(arg)
             viajes_por_persona_df = viajes_por_persona_df.withColumn("viajes", explode(viajes_por_persona_df.viajes))
             viajes_didier_df = viajes_didier_df.union(viajes_por_persona_df.select("identificador", "viajes.codigo_postal_origen", "viajes.codigo_postal_destino", "viajes.kilometros","viajes.precio_kilometro"))
