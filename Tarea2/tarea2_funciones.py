@@ -102,12 +102,6 @@ def obtener_total_ingresos_por_codigo_postal_destino (viajes_didier_df):
 
     return total_ingresos_por_codigo_postal_destino_df   
 
-def unir_dataframes_total_ingresos_por_codigo_postal_origen_destino(total_ingresos_por_codigo_postal_origen_df, total_ingresos_por_codigo_postal_destino_df):
-    
-    total_ingresos_por_codigo_postal_df = total_ingresos_por_codigo_postal_origen_df.union(total_ingresos_por_codigo_postal_destino_df)
-
-    return total_ingresos_por_codigo_postal_df    
-
 
 def obtener_metrica_persona_con_mas_kilometros (viajes_didier_df):
     
@@ -156,10 +150,14 @@ def calcular_metrica_percentil (viajes_didier_df, percentil):
     # valor2_percentil_df = personas_ingresos_df.approxQuantile("sum(Ingreso_por_Viaje)",[percentil/100],0)
     # print (valor2_percentil_df)
     
+    #si se envía un valor de percentil mayor a 100, establece el valor en 100
+    if (percentil > 100):
+        percentil = 100
+
     metrica = "percentil_" + str(percentil) 
-    valor_percentil_df = personas_ingresos_df.select(percentile_approx("sum(Ingreso_por_Viaje)", [percentil/100]).alias("Valor"))
+    valor_percentil_df = personas_ingresos_df.select(percentile_approx("sum(Ingreso_por_Viaje)", [percentil/100])[0].alias("Valor"))
     valor_percentil_df = valor_percentil_df.withColumn("Tipo_de_Metrica",lit(metrica))
-    valor_percentil_df = valor_percentil_df.select (col("Tipo_de_Metrica"), valor_percentil_df.Valor.cast(StringType()))
+    valor_percentil_df = valor_percentil_df.select (col("Tipo_de_Metrica"), col("Valor"))
     
     return valor_percentil_df    
 
@@ -168,6 +166,8 @@ def obtener_metrica_codigo_postal_origen_con_mas_ingresos (viajes_didier_df):
     #excluye los registros con kilómetros o precio_kilometro en 0, negativos o en null
     viajes_didier_df = viajes_didier_df.filter(viajes_didier_df.kilometros > 0)
     viajes_didier_df = viajes_didier_df.filter(viajes_didier_df.precio_kilometro > 0)
+    #excluye códigos postales origen inválidos (por ejemplo en null)
+    viajes_didier_df = viajes_didier_df.filter(viajes_didier_df.codigo_postal_origen > 0)
 
     viajes_didier_df = viajes_didier_df.withColumn("Ingreso_por_Viaje",col("kilometros")*col("precio_kilometro"))
     #viajes_didier_df.show()
@@ -186,6 +186,8 @@ def obtener_metrica_codigo_postal_destino_con_mas_ingresos (viajes_didier_df):
     #excluye los registros con kilómetros o precio_kilometro en 0, negativos o en null
     viajes_didier_df = viajes_didier_df.filter(viajes_didier_df.kilometros > 0)
     viajes_didier_df = viajes_didier_df.filter(viajes_didier_df.precio_kilometro > 0)
+    #excluye códigos postales origen inválidos (por ejemplo en null)
+    viajes_didier_df = viajes_didier_df.filter(viajes_didier_df.codigo_postal_destino > 0)
 
     viajes_didier_df = viajes_didier_df.withColumn("Ingreso_por_Viaje",col("kilometros")*col("precio_kilometro"))
     #viajes_didier_df.show()

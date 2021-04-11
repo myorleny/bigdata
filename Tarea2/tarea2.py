@@ -6,13 +6,13 @@ from pyspark.sql.functions import explode
 
 import tarea2_funciones
 
-import argparse
 import sys
 
 spark = SparkSession.builder.appName("Viajes").getOrCreate()
 spark.sparkContext.setLogLevel('WARN')
 
 def CargarArchivosJSON(args):
+    # print(args)
     #Crea un dataframe para ir acumulando los viajes de cada persona
     viajes_schema = StructType([StructField('identificador', IntegerType()),
                             StructField('codigo_postal_origen', IntegerType()),
