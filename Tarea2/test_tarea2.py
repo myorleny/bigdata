@@ -8,6 +8,7 @@ from .tarea2_funciones import obtener_metrica_persona_con_mas_ingresos
 from .tarea2_funciones import obtener_metrica_codigo_postal_origen_con_mas_ingresos
 from .tarea2_funciones import obtener_metrica_codigo_postal_destino_con_mas_ingresos
 from .tarea2_funciones import calcular_metrica_percentil
+from .tarea2_funciones import unir_dataframes_metricas
 
 #Pruebas para la función obtener_total_viajes_por_codigo_postal_origen
 
@@ -1471,3 +1472,88 @@ def test_metrica_codigo_postal_destino_con_mas_ingresos_registros_con_datos_inva
     actual_ds.show()
 
     assert actual_ds.collect() == esperado_ds.collect()  
+
+# Pruebas para la función unir_dataframes_metricas 
+def test_unir_dataframes_metricas_verifica_datos(spark_session):
+    metrica_persona_con_mas_kilometros_data = [('persona_con_mas_kilometros', 10001)]
+    metrica_persona_con_mas_kilometros_ds = spark_session.createDataFrame(metrica_persona_con_mas_kilometros_data, 
+                                            ['Tipo_de_Metrica', 'Valor'])
+                                                
+    metrica_persona_con_mas_ingresos_data = [('persona_con_mas_ingresos', 10002)]
+    metrica_persona_con_mas_ingresos_ds = spark_session.createDataFrame(metrica_persona_con_mas_ingresos_data,
+                                              ['Tipo_de_Metrica', 'Valor'])
+
+    metrica_percentil_25_data = [('percentil_25', 125005)]
+    metrica_percentil_25_ds = spark_session.createDataFrame(metrica_percentil_25_data,
+                                              ['Tipo_de_Metrica', 'Valor'])  
+    
+    metrica_percentil_50_data = [('percentil_50', 145959)]
+    metrica_percentil_50_ds = spark_session.createDataFrame(metrica_percentil_50_data,
+                                              ['Tipo_de_Metrica', 'Valor'])  
+
+    metrica_percentil_75_data = [('percentil_75', 148642)]
+    metrica_percentil_75_ds = spark_session.createDataFrame(metrica_percentil_75_data,
+                                              ['Tipo_de_Metrica', 'Valor'])                                                                                                                                        
+                                                
+    metrica_codigo_postal_origen_con_mas_ingresos_data = [('codigo_postal_origen_con_mas_ingresos', 10101)]
+    metrica_codigo_postal_origen_con_mas_ingresos_ds = spark_session.createDataFrame(metrica_codigo_postal_origen_con_mas_ingresos_data,
+                                              ['Tipo_de_Metrica', 'Valor'])  
+
+    metrica_codigo_postal_destino_con_mas_ingresos_data = [('codigo_postal_destino_con_mas_ingresos', 30101)]
+    metrica_codigo_postal_destino_con_mas_ingresos_ds = spark_session.createDataFrame(metrica_codigo_postal_destino_con_mas_ingresos_data,
+                                              ['Tipo_de_Metrica', 'Valor'])                                                                                              
+    
+    actual_ds = unir_dataframes_metricas(metrica_persona_con_mas_kilometros_ds, metrica_persona_con_mas_ingresos_ds, metrica_percentil_25_ds, metrica_percentil_50_ds, metrica_percentil_75_ds, metrica_codigo_postal_origen_con_mas_ingresos_ds, metrica_codigo_postal_destino_con_mas_ingresos_ds)
+
+    esperado_ds = spark_session.createDataFrame(
+        [
+            ('persona_con_mas_kilometros', 10001),
+            ('persona_con_mas_ingresos', 10002),
+            ('percentil_25', 125005),
+            ('percentil_50', 145959),
+            ('percentil_75', 148642),
+            ('codigo_postal_origen_con_mas_ingresos', 10101),
+            ('codigo_postal_destino_con_mas_ingresos', 30101),
+        ],
+        ['Tipo_de_Metrica', 'Valor'])
+
+    esperado_ds.show()
+    actual_ds.show()
+
+    assert actual_ds.collect() == esperado_ds.collect()  
+
+def test_unir_dataframes_metricas_verifica_cantidad_registros(spark_session):
+    metrica_persona_con_mas_kilometros_data = [('persona_con_mas_kilometros', 10001)]
+    metrica_persona_con_mas_kilometros_ds = spark_session.createDataFrame(metrica_persona_con_mas_kilometros_data,
+                                              ['Tipo_de_Metrica', 'Valor'])
+                                                
+    metrica_persona_con_mas_ingresos_data = [('persona_con_mas_ingresos', 10002)]
+    metrica_persona_con_mas_ingresos_ds = spark_session.createDataFrame(metrica_persona_con_mas_ingresos_data,
+                                              ['Tipo_de_Metrica', 'Valor'])
+
+    metrica_percentil_25_data = [('percentil_25', 125005.0)]
+    metrica_percentil_25_ds = spark_session.createDataFrame(metrica_percentil_25_data,
+                                              ['Tipo_de_Metrica', 'Valor'])  
+    
+    metrica_percentil_50_data = [('percentil_50', 145959.0)]
+    metrica_percentil_50_ds = spark_session.createDataFrame(metrica_percentil_50_data,
+                                              ['Tipo_de_Metrica', 'Valor'])  
+
+    metrica_percentil_75_data = [('percentil_75', 148642.0)]
+    metrica_percentil_75_ds = spark_session.createDataFrame(metrica_percentil_75_data,
+                                              ['Tipo_de_Metrica', 'Valor'])                                                                                                                                        
+                                                
+    metrica_codigo_postal_origen_con_mas_ingresos_data = [('codigo_postal_origen_con_mas_ingresos', 10101)]
+    metrica_codigo_postal_origen_con_mas_ingresos_ds = spark_session.createDataFrame(metrica_codigo_postal_origen_con_mas_ingresos_data,
+                                              ['Tipo_de_Metrica', 'Valor'])  
+
+    metrica_codigo_postal_destino_con_mas_ingresos_data = [('codigo_postal_destino_con_mas_ingresos', 30101)]
+    metrica_codigo_postal_destino_con_mas_ingresos_ds = spark_session.createDataFrame(metrica_codigo_postal_destino_con_mas_ingresos_data,
+                                              ['Tipo_de_Metrica', 'Valor'])                                                                                              
+    
+    actual_ds = unir_dataframes_metricas(metrica_persona_con_mas_kilometros_ds, metrica_persona_con_mas_ingresos_ds, metrica_percentil_25_ds, metrica_percentil_50_ds, metrica_percentil_75_ds, metrica_codigo_postal_origen_con_mas_ingresos_ds, metrica_codigo_postal_destino_con_mas_ingresos_ds)
+    actual = actual_ds.count()
+
+    esperado = metrica_persona_con_mas_kilometros_ds.count() + metrica_persona_con_mas_ingresos_ds.count() + metrica_percentil_25_ds.count() + metrica_percentil_50_ds.count() + metrica_percentil_75_ds.count() + metrica_codigo_postal_origen_con_mas_ingresos_ds.count() + metrica_codigo_postal_destino_con_mas_ingresos_ds.count()
+
+    assert actual == esperado  
