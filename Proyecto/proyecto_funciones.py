@@ -234,18 +234,45 @@ def agregar_columna_PromocionAlta(escuelas_df):
     # escuelas_df = escuelas_df.select (col('PromocionAlta'))
     # escuelas_df.show()
     # print (escuelas_df.count())
-    return escuelas_df        
+    return escuelas_df  
 
+# def verifica_columnas_nulas_en_escuelas(escuelas_df):
+
+#     # Verifica que no haya quedado ninguna columna con valores nulos
+#     cantidad_nulos = 0
+#     for columna in escuelas_df.columns: 
+#         columnas_null_df = escuelas_df.where(col(columna).isNull())
+#         if columnas_null_df.count() != 0:
+#             cantidad_nulos = cantidad_nulos + columnas_null_df.count()
+#             print ("Existen valores nulos en la columna: ", columna)   
+
+#     if  cantidad_nulos == 0:
+#         print ("No existe ninguna columna con valores nulos.")      
+
+def reemplazar_nombre_columna (df, nombre_anterior, nombre_nuevo):
+    # Renombra columna de un dataset
+    df = df.withColumnRenamed(nombre_anterior, nombre_nuevo)
+    
+    return df
+
+def join_dataframes(escuelas_df, ids_df):
+    
+    # Une los datos de los 2 dataframes: escuelas y IDS (índice de desarrollo social)
+    escuelas_ids_df = escuelas_df.join(ids_df, escuelas_df.cddis15 == ids_df.CodigoDistrito)
+
+    return escuelas_ids_df
 
 def program_princ():
     escuelas_df, ids_df = cargar_archivos_csv()
     escuelas_df = excluir_escuelas_sin_matricula(escuelas_df)
     escuelas_df = aplicar_imputacion_valor_fijo(escuelas_df)
     escuelas_df = aplicar_imputacion_con_la_media(escuelas_df)
-    # escuelas_df = aplicar_imputacion_con_la_moda(escuelas_df)
     escuelas_df = corregir_columnas_negativas(escuelas_df)
     escuelas_df = aplicar_imputacion_aprobados(escuelas_df)
     escuelas_df = agregar_columna_PromocionAlta(escuelas_df)
+    # escuelas_df = verifica_columnas_nulas_en_escuelas(escuelas_df)
+    ids_df = reemplazar_nombre_columna (ids_df, 'Codigo', 'CodigoDistrito')
+    escuelas_ids_df = join_dataframes(escuelas_df, ids_df)
 
 program_princ()    
 
