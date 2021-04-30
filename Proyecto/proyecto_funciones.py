@@ -228,6 +228,10 @@ def agregar_columna_PromocionAlta(escuelas_df):
         ).otherwise(0)
         )        
 
+    # escuelas_df.show()
+    escuelas_df = escuelas_df \
+        .drop('PorcentajeAprobados') \
+
     # escuelas_df = escuelas_df.where(col('aprobt_15') > col('mit_15'))
     # print (escuelas_df.count())   
     # escuelas_df = escuelas_df.where(col('PromocionAlta') == 0)
@@ -258,7 +262,7 @@ def reemplazar_nombre_columna (df, nombre_anterior, nombre_nuevo):
 def join_dataframes(escuelas_df, ids_df):
     
     # Une los datos de los 2 dataframes: escuelas y IDS (índice de desarrollo social)
-    escuelas_ids_df = escuelas_df.join(ids_df, escuelas_df.cddis15 == ids_df.CodigoDistrito)
+    escuelas_ids_df = escuelas_df.join(ids_df, escuelas_df.cddis15 == ids_df.Codigo)
 
     return escuelas_ids_df
 
@@ -271,8 +275,8 @@ def program_princ():
     escuelas_df = aplicar_imputacion_aprobados(escuelas_df)
     escuelas_df = agregar_columna_PromocionAlta(escuelas_df)
     # escuelas_df = verifica_columnas_nulas_en_escuelas(escuelas_df)
-    ids_df = reemplazar_nombre_columna (ids_df, 'Codigo', 'CodigoDistrito')
-    escuelas_ids_df = join_dataframes(escuelas_df, ids_df)
+    # ids_df = reemplazar_nombre_columna (ids_df, 'Codigo', 'CodigoDistrito')
+    # escuelas_ids_df = join_dataframes(escuelas_df, ids_df)
 
 program_princ()    
 

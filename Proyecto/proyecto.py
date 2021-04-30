@@ -23,6 +23,17 @@ def programaPrincipal():
     escuelas_df, ids_df = proyecto_funciones.cargar_archivos_csv()
     
     #almacena en base de datos, en una tabla llamada "escuelas" el dataframe que contiene la información de las escuelas ya procesada
+    # escuelas_df \
+    #     .write \
+    #     .mode("overwrite") \
+    #     .format("jdbc") \
+    #     .option("url", "jdbc:postgresql://host.docker.internal:5433/postgres") \
+    #     .option("user", "postgres") \
+    #     .option("password", "testPassword") \
+    #     .option("dbtable", "escuelas") \
+    #     .option("driver", "org.postgresql.Driver") \
+    #     .save()     
+
     escuelas_df \
         .write \
         .mode("overwrite") \
@@ -31,10 +42,20 @@ def programaPrincipal():
         .option("user", "postgres") \
         .option("password", "testPassword") \
         .option("dbtable", "escuelas") \
-        .option("driver", "org.postgresql.Driver") \
-        .save()     
+        .save()      
 
     #almacena en base de datos, en una tabla llamada "indice_desarrollo_social" el dataframe que contiene la información del indice de desarrollo social distrital, ya procesada
+    # ids_df \
+    #     .write \
+    #     .mode("overwrite") \
+    #     .format("jdbc") \
+    #     .option("url", "jdbc:postgresql://host.docker.internal:5433/postgres") \
+    #     .option("user", "postgres") \
+    #     .option("password", "testPassword") \
+    #     .option("dbtable", "indice_desarrollo_social") \
+    #     .option("driver", "org.postgresql.Driver") \
+    #     .save()   
+
     ids_df \
         .write \
         .mode("overwrite") \
@@ -43,8 +64,7 @@ def programaPrincipal():
         .option("user", "postgres") \
         .option("password", "testPassword") \
         .option("dbtable", "indice_desarrollo_social") \
-        .option("driver", "org.postgresql.Driver") \
-        .save()   
+        .save()           
 
     # Ejecuta todas las funciones para el preprocesamiento de los datos 
     escuelas_df = proyecto_funciones.excluir_escuelas_sin_matricula(escuelas_df)
@@ -53,10 +73,21 @@ def programaPrincipal():
     escuelas_df = proyecto_funciones.corregir_columnas_negativas(escuelas_df)
     escuelas_df = proyecto_funciones.aplicar_imputacion_aprobados(escuelas_df)
     escuelas_df = proyecto_funciones.agregar_columna_PromocionAlta(escuelas_df)
-    ids_df = proyecto_funciones.reemplazar_nombre_columna (ids_df, 'Codigo', 'CodigoDistrito')
+    # ids_df = proyecto_funciones.reemplazar_nombre_columna (ids_df, 'Codigo', 'CodigoDistrito')
     escuelas_ids_df = proyecto_funciones.join_dataframes(escuelas_df, ids_df)       
 
     #almacena en base de datos, en una tabla llamada "Escuelas_IDS" el dataframe que contiene la información de las escuelas y el indice de desarrollo social distrital, ya cruzados
+    # escuelas_ids_df \
+    #     .write \
+    #     .mode("overwrite") \
+    #     .format("jdbc") \
+    #     .option("url", "jdbc:postgresql://host.docker.internal:5433/postgres") \
+    #     .option("user", "postgres") \
+    #     .option("password", "testPassword") \
+    #     .option("dbtable", "Escuelas_IDS") \
+    #     .option("driver", "org.postgresql.Driver") \
+    #     .save()       
+
     escuelas_ids_df \
         .write \
         .mode("overwrite") \
@@ -65,7 +96,6 @@ def programaPrincipal():
         .option("user", "postgres") \
         .option("password", "testPassword") \
         .option("dbtable", "Escuelas_IDS") \
-        .option("driver", "org.postgresql.Driver") \
-        .save()          
+        .save()    
 
 programaPrincipal()

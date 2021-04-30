@@ -1,1559 +1,692 @@
-from .tarea2_funciones import obtener_total_viajes_por_codigo_postal_origen
-from .tarea2_funciones import obtener_total_viajes_por_codigo_postal_destino
-from .tarea2_funciones import unir_dataframes
-from .tarea2_funciones import obtener_total_ingresos_por_codigo_postal_origen
-from .tarea2_funciones import obtener_total_ingresos_por_codigo_postal_destino
-from .tarea2_funciones import obtener_metrica_persona_con_mas_kilometros
-from .tarea2_funciones import obtener_metrica_persona_con_mas_ingresos
-from .tarea2_funciones import obtener_metrica_codigo_postal_origen_con_mas_ingresos
-from .tarea2_funciones import obtener_metrica_codigo_postal_destino_con_mas_ingresos
-from .tarea2_funciones import calcular_metrica_percentil
-from .tarea2_funciones import unir_dataframes_metricas
+from .proyecto_funciones import cargar_archivos_csv
+from .proyecto_funciones import excluir_escuelas_sin_matricula
+from .proyecto_funciones import aplicar_imputacion_valor_fijo
+from .proyecto_funciones import aplicar_imputacion_con_la_media
+from .proyecto_funciones import corregir_columnas_negativas
+from .proyecto_funciones import aplicar_imputacion_aprobados
+from .proyecto_funciones import agregar_columna_PromocionAlta
+from .proyecto_funciones import reemplazar_nombre_columna
+from .proyecto_funciones import join_dataframes
 
-#Pruebas para la función obtener_total_viajes_por_codigo_postal_origen
+# Prueba la función cargar_archivos_csv al cargar el archivo de escuelas "megabaseprimaria_2015.csv", valida que al cargar el archivo a un dataframe la cantidad de registros 
+# del dataframe coincida con la cantidad real de registros que tiene el csv
+def test_cargar_archivos_csv_escuelas(spark_session):
+    #llama a la función que carga los archivos .csv en dataframes
+    escuelas_df, ids_df = cargar_archivos_csv()
+    actual = escuelas_df.count()
 
-def test_total_viajes_por_codigo_postal_origen_1_viaje_por_codigo_postal(spark_session):
-    viajes_didier_data = [(10000, 20101, 20105, 5.0, 600),
-                        (10000, 20302, 20105, 38.5, 290),
-                        (10001, 11504, 20101, 20.0, 800)] 
+    # 4266 es la cantidad de registros que tiene el csv "megabaseprimaria_2015.csv" 
+    esperado = 4266
+
+    assert actual == esperado    
+
+# Prueba la función cargar_archivos_csv al cargar el archivo de índice de desarrollo social "IDS_distrital_cantonal.csv", valida que al cargar el archivo a un dataframe la cantidad de registros 
+# del dataframe coincida con la cantidad real de registros que tiene el csv
+def test_cargar_archivos_csv_ids(spark_session):
+    #llama a la función que carga los archivos .csv en dataframes
+    escuelas_df, ids_df = cargar_archivos_csv()
+    actual = ids_df.count()
+
+    # 477 es la cantidad de registros que tiene el csv "IDS_distrital_cantonal.csv" 
+    esperado = 477
+
+    assert actual == esperado       
+
+############################################################################
+# Pruebas para la función excluir_escuelas_sin_matricula
+# Se prueba la función excluir_escuelas_sin_matricula cuando alguno de los registros de la columna "mit_15" (que corresponde a la matrícula) tiene null, en este caso se espera que ese registro de escuela sea excluido
+def test_excluir_escuelas_sin_matricula_campo_matricula_null(spark_session):
+    escuelas_data = [(76, 'VIRGEN DE GUADALUPE', 1990, 1, 1, 101, 10111, 1, 1, 85, 43, 0, 0, 84, 44, 5, 4, 0, 0, -3, -1, 0, 0, 11, 6, 1, 0, 0, 0, 0, 6, 6, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 6, 6, 0, 0, 1, 1, 1, 1, 7, 7, 0, 0, 0, 23, 0, 21, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 99, 99, 1, 1, 1, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 48, 0, 0, 85, 48, 0, 0, 4, 0),
+                     (80, 'VITALIA MADRIGAL ARAYA', 1908, 1, 1, 101, 10111, 1, 1, None, 43, 0, 0, 84, 44, 5, 4, 0, 0, -3, -1, 0, 0, 11, 6, 1, 0, 0, 0, 0, 6, 6, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 6, 6, 0, 0, 1, 1, 1, 1, 7, 7, 0, 0, 0, 23, 0, 21, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 99, 99, 1, 1, 1, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 48, 0, 0, 85, 48, 0, 0, 4, 0),
+                    ] 
                                     
-    viajes_didier_ds = spark_session.createDataFrame(viajes_didier_data,
-                                              ['identificador', 'codigo_postal_origen', 'codigo_postal_destino', 'kilometros', 'precio_kilometro'])
+    escuelas_data_ds = spark_session.createDataFrame(escuelas_data,
+                        ['llave', 'nombre_ins', 'creacion00', 'direg15', 'cdpr15', 'cdcan15', 'cddis15', 'regplan15', 'zona15', 'mit_15', 'mih_15', 'rt_15', 'rh_15', 'aprobt_15', 'aprobh_15', 'reprot_15', 'reproh_15', 'desa_15', 'desah_15', 'desert_15', 'deserh_15', 'act_15', 'ach_15', 'nst_15', 'nsh_15', 'sit_15', 'sih_15', 'embt_15', 'embmenor_15', 'embmayor_15', 'aat15', 'aab15', 'apt15', 'apb15', 'aest15', 'aesb15', 'aaet15', 'aaeb15', 'anat15', 'anab15', 'inft15', 'infb15', 'olat15', 'olab15', 'salt15', 'salb15', 'comt15', 'comb15', 'bibt15', 'bibb15', 'gimt15', 'gimb15', 'talt_ai15', 'talb_ai15', 'otalt15', 'otalb15', 'sodt15', 'sodb15', 'indt15', 'indb15', 'lavt15', 'lavb15', 'sant15', 'sanb15', 'tvt15', 'tvb15', 'vbt15', 'vbb15', 'dvdt15', 'dvdb15', 'cetoi15', 'cetos15', 'cepei15', 'cepes15', 'cepai15', 'cepas15', 'ceadi15', 'ceads15', 'cptoi15', 'cptos15', 'cppei15', 'cppes15', 'cppai15', 'cppas15', 'cpadi15', 'cpads15', 'bib15', 'sal15', 'pla15', 'aux15', 'serv_int15', 'expto_15', 'expdef_15', 'exptem_15', 'agrve_15', 
+                        'agrvep_15', 'agrveo_15', 'agrfe_15', 'agrfep_15', 'agrfeo_15', 'agree_15', 'agreep_15', 'agreeo_15', 'agrre_15', 'agrrep_15', 'agrreo_15', 'agrde_15', 'agrdep_15', 'agrdeo_15', 'agroe_15', 'agroep_15', 'agroeo_15', 'int_15', 'inht_15', 'rit_15', 'rih_15', 'frt_15', 'frh_15', 'itt_15', 'ith_15', 'extrant_15', 'extranh_15'])
                                                 
 
-    viajes_didier_ds.show()
+    escuelas_data_ds.show()
 
-    actual_ds = obtener_total_viajes_por_codigo_postal_origen(viajes_didier_ds)
+    actual_ds = excluir_escuelas_sin_matricula(escuelas_data_ds)
 
     esperado_ds = spark_session.createDataFrame(
         [
-            (11504, 'Origen', 1),
-            (20101, 'Origen', 1),
-            (20302, 'Origen', 1),
+            (76, 'VIRGEN DE GUADALUPE', 1990, 1, 1, 101, 10111, 1, 1, 85, 43, 0, 0, 84, 44, 5, 4, 0, 0, -3, -1, 0, 0, 11, 6, 1, 0, 0, 0, 0, 6, 6, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 6, 6, 0, 0, 1, 1, 1, 1, 7, 7, 0, 0, 0, 23, 0, 21, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 99, 99, 1, 1, 1, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 48, 0, 0, 85, 48, 0, 0, 4, 0),
         ],
-        ['Codigo_Postal', 'Origen_Destino', 'Cantidad_Total_Viajes'])
+        ['llave', 'nombre_ins', 'creacion00', 'direg15', 'cdpr15', 'cdcan15', 'cddis15', 'regplan15', 'zona15', 'mit_15', 'mih_15', 'rt_15', 'rh_15', 'aprobt_15', 'aprobh_15', 'reprot_15', 'reproh_15', 'desa_15', 'desah_15', 'desert_15', 'deserh_15', 'act_15', 'ach_15', 'nst_15', 'nsh_15', 'sit_15', 'sih_15', 'embt_15', 'embmenor_15', 'embmayor_15', 'aat15', 'aab15', 'apt15', 'apb15', 'aest15', 'aesb15', 'aaet15', 'aaeb15', 'anat15', 'anab15', 'inft15', 'infb15', 'olat15', 'olab15', 'salt15', 'salb15', 'comt15', 'comb15', 'bibt15', 'bibb15', 'gimt15', 'gimb15', 'talt_ai15', 'talb_ai15', 'otalt15', 'otalb15', 'sodt15', 'sodb15', 'indt15', 'indb15', 'lavt15', 'lavb15', 'sant15', 'sanb15', 'tvt15', 'tvb15', 'vbt15', 'vbb15', 'dvdt15', 'dvdb15', 'cetoi15', 'cetos15', 'cepei15', 'cepes15', 'cepai15', 'cepas15', 'ceadi15', 'ceads15', 'cptoi15', 'cptos15', 'cppei15', 'cppes15', 'cppai15', 'cppas15', 'cpadi15', 'cpads15', 'bib15', 'sal15', 'pla15', 'aux15', 'serv_int15', 'expto_15', 'expdef_15', 'exptem_15', 'agrve_15', 
+                        'agrvep_15', 'agrveo_15', 'agrfe_15', 'agrfep_15', 'agrfeo_15', 'agree_15', 'agreep_15', 'agreeo_15', 'agrre_15', 'agrrep_15', 'agrreo_15', 'agrde_15', 'agrdep_15', 'agrdeo_15', 'agroe_15', 'agroep_15', 'agroeo_15', 'int_15', 'inht_15', 'rit_15', 'rih_15', 'frt_15', 'frh_15', 'itt_15', 'ith_15', 'extrant_15', 'extranh_15'])
 
     esperado_ds.show()
     actual_ds.show()
 
     assert actual_ds.collect() == esperado_ds.collect() 
 
-def test_total_viajes_por_codigo_postal_origen_varios_viajes_por_codigo_postal(spark_session):
-
-
-    viajes_didier_data = [(10000, 20101, 20105, 5.0, 600),
-                        (10000, 20302, 20105, 38.5, 290),
-                        (10001, 11504, 20101, 20.0, 800),
-                        (10005, 20101, 60101, 100.8, 650),
-                        (10200, 20101, 11501, 22.3, 490),
-                        (10198, 11504, 11501, 2.0, 500)] 
+# Se prueba la función excluir_escuelas_sin_matricula cuando los campos de todas las columnas están completos, es decir, ninguno tiene null, 
+# en este caso se espera que todos los registros sean tomados en cuenta
+def test_excluir_escuelas_sin_matricula_todos_los_campos_sin_null(spark_session):
+    escuelas_data = [(76, 'VIRGEN DE GUADALUPE', 1990, 1, 1, 101, 10111, 1, 1, 85, 43, 0, 0, 84, 44, 5, 4, 0, 0, -3, -1, 0, 0, 11, 6, 1, 0, 0, 0, 0, 6, 6, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 6, 6, 0, 0, 1, 1, 1, 1, 7, 7, 0, 0, 0, 23, 0, 21, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 99, 99, 1, 1, 1, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 48, 0, 0, 85, 48, 0, 0, 4, 0),
+                     (80, 'VITALIA MADRIGAL ARAYA', 1908, 1, 1, 101, 10111, 1, 1, 100, 43, 0, 0, 84, 44, 5, 4, 0, 0, -3, -1, 0, 0, 11, 6, 1, 0, 0, 0, 0, 6, 6, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 6, 6, 0, 0, 1, 1, 1, 1, 7, 7, 0, 0, 0, 23, 0, 21, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 99, 99, 1, 1, 1, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 48, 0, 0, 85, 48, 0, 0, 4, 0),
+                    ] 
                                     
-    viajes_didier_ds = spark_session.createDataFrame(viajes_didier_data,
-                                              ['identificador', 'codigo_postal_origen', 'codigo_postal_destino', 'kilometros', 'precio_kilometro'])
+    escuelas_data_ds = spark_session.createDataFrame(escuelas_data,
+                        ['llave', 'nombre_ins', 'creacion00', 'direg15', 'cdpr15', 'cdcan15', 'cddis15', 'regplan15', 'zona15', 'mit_15', 'mih_15', 'rt_15', 'rh_15', 'aprobt_15', 'aprobh_15', 'reprot_15', 'reproh_15', 'desa_15', 'desah_15', 'desert_15', 'deserh_15', 'act_15', 'ach_15', 'nst_15', 'nsh_15', 'sit_15', 'sih_15', 'embt_15', 'embmenor_15', 'embmayor_15', 'aat15', 'aab15', 'apt15', 'apb15', 'aest15', 'aesb15', 'aaet15', 'aaeb15', 'anat15', 'anab15', 'inft15', 'infb15', 'olat15', 'olab15', 'salt15', 'salb15', 'comt15', 'comb15', 'bibt15', 'bibb15', 'gimt15', 'gimb15', 'talt_ai15', 'talb_ai15', 'otalt15', 'otalb15', 'sodt15', 'sodb15', 'indt15', 'indb15', 'lavt15', 'lavb15', 'sant15', 'sanb15', 'tvt15', 'tvb15', 'vbt15', 'vbb15', 'dvdt15', 'dvdb15', 'cetoi15', 'cetos15', 'cepei15', 'cepes15', 'cepai15', 'cepas15', 'ceadi15', 'ceads15', 'cptoi15', 'cptos15', 'cppei15', 'cppes15', 'cppai15', 'cppas15', 'cpadi15', 'cpads15', 'bib15', 'sal15', 'pla15', 'aux15', 'serv_int15', 'expto_15', 'expdef_15', 'exptem_15', 'agrve_15', 
+                        'agrvep_15', 'agrveo_15', 'agrfe_15', 'agrfep_15', 'agrfeo_15', 'agree_15', 'agreep_15', 'agreeo_15', 'agrre_15', 'agrrep_15', 'agrreo_15', 'agrde_15', 'agrdep_15', 'agrdeo_15', 'agroe_15', 'agroep_15', 'agroeo_15', 'int_15', 'inht_15', 'rit_15', 'rih_15', 'frt_15', 'frh_15', 'itt_15', 'ith_15', 'extrant_15', 'extranh_15'])
                                                 
 
-    viajes_didier_ds.show()
+    escuelas_data_ds.show()
 
-    actual_ds = obtener_total_viajes_por_codigo_postal_origen(viajes_didier_ds)
+    actual_ds = excluir_escuelas_sin_matricula(escuelas_data_ds)
 
     esperado_ds = spark_session.createDataFrame(
         [
-            (11504, 'Origen', 2),
-            (20101, 'Origen', 3),
-            (20302, 'Origen', 1),
+            (76, 'VIRGEN DE GUADALUPE', 1990, 1, 1, 101, 10111, 1, 1, 85, 43, 0, 0, 84, 44, 5, 4, 0, 0, -3, -1, 0, 0, 11, 6, 1, 0, 0, 0, 0, 6, 6, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 6, 6, 0, 0, 1, 1, 1, 1, 7, 7, 0, 0, 0, 23, 0, 21, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 99, 99, 1, 1, 1, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 48, 0, 0, 85, 48, 0, 0, 4, 0),
+            (80, 'VITALIA MADRIGAL ARAYA', 1908, 1, 1, 101, 10111, 1, 1, 100, 43, 0, 0, 84, 44, 5, 4, 0, 0, -3, -1, 0, 0, 11, 6, 1, 0, 0, 0, 0, 6, 6, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 6, 6, 0, 0, 1, 1, 1, 1, 7, 7, 0, 0, 0, 23, 0, 21, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 99, 99, 1, 1, 1, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 48, 0, 0, 85, 48, 0, 0, 4, 0),
         ],
-        ['Codigo_Postal', 'Origen_Destino', 'Cantidad_Total_Viajes'])
+        ['llave', 'nombre_ins', 'creacion00', 'direg15', 'cdpr15', 'cdcan15', 'cddis15', 'regplan15', 'zona15', 'mit_15', 'mih_15', 'rt_15', 'rh_15', 'aprobt_15', 'aprobh_15', 'reprot_15', 'reproh_15', 'desa_15', 'desah_15', 'desert_15', 'deserh_15', 'act_15', 'ach_15', 'nst_15', 'nsh_15', 'sit_15', 'sih_15', 'embt_15', 'embmenor_15', 'embmayor_15', 'aat15', 'aab15', 'apt15', 'apb15', 'aest15', 'aesb15', 'aaet15', 'aaeb15', 'anat15', 'anab15', 'inft15', 'infb15', 'olat15', 'olab15', 'salt15', 'salb15', 'comt15', 'comb15', 'bibt15', 'bibb15', 'gimt15', 'gimb15', 'talt_ai15', 'talb_ai15', 'otalt15', 'otalb15', 'sodt15', 'sodb15', 'indt15', 'indb15', 'lavt15', 'lavb15', 'sant15', 'sanb15', 'tvt15', 'tvb15', 'vbt15', 'vbb15', 'dvdt15', 'dvdb15', 'cetoi15', 'cetos15', 'cepei15', 'cepes15', 'cepai15', 'cepas15', 'ceadi15', 'ceads15', 'cptoi15', 'cptos15', 'cppei15', 'cppes15', 'cppai15', 'cppas15', 'cpadi15', 'cpads15', 'bib15', 'sal15', 'pla15', 'aux15', 'serv_int15', 'expto_15', 'expdef_15', 'exptem_15', 'agrve_15', 
+                        'agrvep_15', 'agrveo_15', 'agrfe_15', 'agrfep_15', 'agrfeo_15', 'agree_15', 'agreep_15', 'agreeo_15', 'agrre_15', 'agrrep_15', 'agrreo_15', 'agrde_15', 'agrdep_15', 'agrdeo_15', 'agroe_15', 'agroep_15', 'agroeo_15', 'int_15', 'inht_15', 'rit_15', 'rih_15', 'frt_15', 'frh_15', 'itt_15', 'ith_15', 'extrant_15', 'extranh_15'])
 
     esperado_ds.show()
     actual_ds.show()
 
     assert actual_ds.collect() == esperado_ds.collect()   
 
-def test_total_viajes_por_codigo_postal_origen_mismo_viaje_varias_veces(spark_session):
-    viajes_didier_data = [(10000, 20101, 20105, 5.0, 600),
-                        (10000, 20101, 20105, 5.0, 600),
-                        (10000, 20101, 20105, 5.0, 600)] 
+# Se prueba la función excluir_escuelas_sin_matricula cuando alguno de los registros tiene null en otras columnas, pero en la columna "mit_15" (que corresponde a la matrícula) sí tiene un valor válido, 
+# en este caso se espera que ese registro de escuela NO sea excluido, dado que solo se excluyen los que tienen "mit_15" en null
+def test_excluir_escuelas_sin_matricula_otros_campos_null(spark_session):
+    escuelas_data = [(76, 'VIRGEN DE GUADALUPE', 1990, 1, 1, 101, 10111, 1, 1, 85, 43, 0, 0, 84, 44, 5, 4, 0, 0, -3, -1, 0, 0, 11, 6, 1, 0, 0, 0, 0, 6, 6, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 6, 6, 0, 0, 1, 1, 1, 1, 7, 7, 0, 0, 0, 23, 0, 21, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 99, 99, 1, 1, 1, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 48, 0, 0, 85, 48, 0, 0, 4, 0),
+                     (80, 'VITALIA MADRIGAL ARAYA', 1908, 1, 1, 101, 10111, 1, 1, 100, 43, 0, None, 84, 44, 5, None, 0, None, -3, -1, 0, 0, 11, 6, 1, 0, 0, 0, 0, 6, 6, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 6, 6, 0, 0, 1, 1, 1, 1, 7, 7, 0, 0, 0, 23, 0, 21, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 99, 99, 1, 1, 1, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 48, 0, 0, 85, 48, 0, 0, 4, 0),
+                    ] 
                                     
-    viajes_didier_ds = spark_session.createDataFrame(viajes_didier_data,
-                                              ['identificador', 'codigo_postal_origen', 'codigo_postal_destino', 'kilometros', 'precio_kilometro'])
+    escuelas_data_ds = spark_session.createDataFrame(escuelas_data,
+                        ['llave', 'nombre_ins', 'creacion00', 'direg15', 'cdpr15', 'cdcan15', 'cddis15', 'regplan15', 'zona15', 'mit_15', 'mih_15', 'rt_15', 'rh_15', 'aprobt_15', 'aprobh_15', 'reprot_15', 'reproh_15', 'desa_15', 'desah_15', 'desert_15', 'deserh_15', 'act_15', 'ach_15', 'nst_15', 'nsh_15', 'sit_15', 'sih_15', 'embt_15', 'embmenor_15', 'embmayor_15', 'aat15', 'aab15', 'apt15', 'apb15', 'aest15', 'aesb15', 'aaet15', 'aaeb15', 'anat15', 'anab15', 'inft15', 'infb15', 'olat15', 'olab15', 'salt15', 'salb15', 'comt15', 'comb15', 'bibt15', 'bibb15', 'gimt15', 'gimb15', 'talt_ai15', 'talb_ai15', 'otalt15', 'otalb15', 'sodt15', 'sodb15', 'indt15', 'indb15', 'lavt15', 'lavb15', 'sant15', 'sanb15', 'tvt15', 'tvb15', 'vbt15', 'vbb15', 'dvdt15', 'dvdb15', 'cetoi15', 'cetos15', 'cepei15', 'cepes15', 'cepai15', 'cepas15', 'ceadi15', 'ceads15', 'cptoi15', 'cptos15', 'cppei15', 'cppes15', 'cppai15', 'cppas15', 'cpadi15', 'cpads15', 'bib15', 'sal15', 'pla15', 'aux15', 'serv_int15', 'expto_15', 'expdef_15', 'exptem_15', 'agrve_15', 
+                        'agrvep_15', 'agrveo_15', 'agrfe_15', 'agrfep_15', 'agrfeo_15', 'agree_15', 'agreep_15', 'agreeo_15', 'agrre_15', 'agrrep_15', 'agrreo_15', 'agrde_15', 'agrdep_15', 'agrdeo_15', 'agroe_15', 'agroep_15', 'agroeo_15', 'int_15', 'inht_15', 'rit_15', 'rih_15', 'frt_15', 'frh_15', 'itt_15', 'ith_15', 'extrant_15', 'extranh_15'])
                                                 
 
-    viajes_didier_ds.show()
+    escuelas_data_ds.show()
 
-    actual_ds = obtener_total_viajes_por_codigo_postal_origen(viajes_didier_ds)
+    actual_ds = excluir_escuelas_sin_matricula(escuelas_data_ds)
 
     esperado_ds = spark_session.createDataFrame(
         [
-            (20101, 'Origen', 3),
+            (76, 'VIRGEN DE GUADALUPE', 1990, 1, 1, 101, 10111, 1, 1, 85, 43, 0, 0, 84, 44, 5, 4, 0, 0, -3, -1, 0, 0, 11, 6, 1, 0, 0, 0, 0, 6, 6, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 6, 6, 0, 0, 1, 1, 1, 1, 7, 7, 0, 0, 0, 23, 0, 21, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 99, 99, 1, 1, 1, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 48, 0, 0, 85, 48, 0, 0, 4, 0),
+            (80, 'VITALIA MADRIGAL ARAYA', 1908, 1, 1, 101, 10111, 1, 1, 100, 43, 0, None, 84, 44, 5, None, 0, None, -3, -1, 0, 0, 11, 6, 1, 0, 0, 0, 0, 6, 6, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 6, 6, 0, 0, 1, 1, 1, 1, 7, 7, 0, 0, 0, 23, 0, 21, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 99, 99, 1, 1, 1, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 48, 0, 0, 85, 48, 0, 0, 4, 0),
         ],
-        ['Codigo_Postal', 'Origen_Destino', 'Cantidad_Total_Viajes'])
+        ['llave', 'nombre_ins', 'creacion00', 'direg15', 'cdpr15', 'cdcan15', 'cddis15', 'regplan15', 'zona15', 'mit_15', 'mih_15', 'rt_15', 'rh_15', 'aprobt_15', 'aprobh_15', 'reprot_15', 'reproh_15', 'desa_15', 'desah_15', 'desert_15', 'deserh_15', 'act_15', 'ach_15', 'nst_15', 'nsh_15', 'sit_15', 'sih_15', 'embt_15', 'embmenor_15', 'embmayor_15', 'aat15', 'aab15', 'apt15', 'apb15', 'aest15', 'aesb15', 'aaet15', 'aaeb15', 'anat15', 'anab15', 'inft15', 'infb15', 'olat15', 'olab15', 'salt15', 'salb15', 'comt15', 'comb15', 'bibt15', 'bibb15', 'gimt15', 'gimb15', 'talt_ai15', 'talb_ai15', 'otalt15', 'otalb15', 'sodt15', 'sodb15', 'indt15', 'indb15', 'lavt15', 'lavb15', 'sant15', 'sanb15', 'tvt15', 'tvb15', 'vbt15', 'vbb15', 'dvdt15', 'dvdb15', 'cetoi15', 'cetos15', 'cepei15', 'cepes15', 'cepai15', 'cepas15', 'ceadi15', 'ceads15', 'cptoi15', 'cptos15', 'cppei15', 'cppes15', 'cppai15', 'cppas15', 'cpadi15', 'cpads15', 'bib15', 'sal15', 'pla15', 'aux15', 'serv_int15', 'expto_15', 'expdef_15', 'exptem_15', 'agrve_15', 
+                        'agrvep_15', 'agrveo_15', 'agrfe_15', 'agrfep_15', 'agrfeo_15', 'agree_15', 'agreep_15', 'agreeo_15', 'agrre_15', 'agrrep_15', 'agrreo_15', 'agrde_15', 'agrdep_15', 'agrdeo_15', 'agroe_15', 'agroep_15', 'agroeo_15', 'int_15', 'inht_15', 'rit_15', 'rih_15', 'frt_15', 'frh_15', 'itt_15', 'ith_15', 'extrant_15', 'extranh_15'])
 
     esperado_ds.show()
     actual_ds.show()
 
-    assert actual_ds.collect() == esperado_ds.collect()    
+    assert actual_ds.collect() == esperado_ds.collect()       
 
-def test_total_viajes_por_codigo_postal_origen_kilometros_negativos_cero_null(spark_session):
-    viajes_didier_data = [(10000, 20101, 20105, -5.0, 600),
-                        (10000, 20302, 20105, 38.5, 290),
-                        (10001, 11504, 20101, None, 800),
-                        (10005, 20101, 60101, 100.8, 650),
-                        (10200, 20101, 11501, 22.3, 490),
-                        (10198, 11504, 11501, 0.0, 500)] 
+########################################################################
+# Se prueba la función aplicar_imputacion_valor_fijo cuando existen registros con null en varias columnas para las cuales se definió que la imputación debería hacerle sustituyendo el valor 
+# null por un cero. En este caso se espera que la función devuelva los mismos registros, pero haciendo el reemplazo del null por 0
+def test_aplicar_imputacion_valor_fijo_reemplazo_con_cero(spark_session):
+    escuelas_data = [(76, 'VIRGEN DE GUADALUPE', 1990, 1, 1, 101, 10111, 1, 1, 85, 43, 0, 0, 84, 44, 5, 4, 0, 0, -3, -1, 0, 0, 11, 6, 1, 0, 0, 0, 0, 6, 6, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 6, 6, 0, 0, 1, 1, 1, 1, 7, 7, 0, 0, 0, 23, 0, 21, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 99, 99, 1, 1, 1, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 48, 0, 0, 85, 48, 0, 0, 4, 0),
+                     (80, 'VITALIA MADRIGAL ARAYA', 1908, 1, 1, 101, 10111, 1, 1, 100, 43, 0, None, 84, 44, 5, None, 0, None, -3, -1, 0, 0, 11, 6, 1, 0, 0, 0, 0, 6, 6, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 6, 6, 0, 0, 1, 1, 1, 1, 7, 7, 0, 0, 0, 23, 0, 21, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 99, 99, 1, 1, 1, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 48, 0, 0, 85, 48, 0, 0, 4, 0),
+                    ] 
                                     
-    viajes_didier_ds = spark_session.createDataFrame(viajes_didier_data,
-                                              ['identificador', 'codigo_postal_origen', 'codigo_postal_destino', 'kilometros', 'precio_kilometro'])
+    escuelas_data_ds = spark_session.createDataFrame(escuelas_data,
+                        ['llave', 'nombre_ins', 'creacion00', 'direg15', 'cdpr15', 'cdcan15', 'cddis15', 'regplan15', 'zona15', 'mit_15', 'mih_15', 'rt_15', 'rh_15', 'aprobt_15', 'aprobh_15', 'reprot_15', 'reproh_15', 'desa_15', 'desah_15', 'desert_15', 'deserh_15', 'act_15', 'ach_15', 'nst_15', 'nsh_15', 'sit_15', 'sih_15', 'embt_15', 'embmenor_15', 'embmayor_15', 'aat15', 'aab15', 'apt15', 'apb15', 'aest15', 'aesb15', 'aaet15', 'aaeb15', 'anat15', 'anab15', 'inft15', 'infb15', 'olat15', 'olab15', 'salt15', 'salb15', 'comt15', 'comb15', 'bibt15', 'bibb15', 'gimt15', 'gimb15', 'talt_ai15', 'talb_ai15', 'otalt15', 'otalb15', 'sodt15', 'sodb15', 'indt15', 'indb15', 'lavt15', 'lavb15', 'sant15', 'sanb15', 'tvt15', 'tvb15', 'vbt15', 'vbb15', 'dvdt15', 'dvdb15', 'cetoi15', 'cetos15', 'cepei15', 'cepes15', 'cepai15', 'cepas15', 'ceadi15', 'ceads15', 'cptoi15', 'cptos15', 'cppei15', 'cppes15', 'cppai15', 'cppas15', 'cpadi15', 'cpads15', 'bib15', 'sal15', 'pla15', 'aux15', 'serv_int15', 'expto_15', 'expdef_15', 'exptem_15', 'agrve_15', 
+                        'agrvep_15', 'agrveo_15', 'agrfe_15', 'agrfep_15', 'agrfeo_15', 'agree_15', 'agreep_15', 'agreeo_15', 'agrre_15', 'agrrep_15', 'agrreo_15', 'agrde_15', 'agrdep_15', 'agrdeo_15', 'agroe_15', 'agroep_15', 'agroeo_15', 'int_15', 'inht_15', 'rit_15', 'rih_15', 'frt_15', 'frh_15', 'itt_15', 'ith_15', 'extrant_15', 'extranh_15'])
                                                 
 
-    viajes_didier_ds.show()
+    escuelas_data_ds.show()
 
-    actual_ds = obtener_total_viajes_por_codigo_postal_origen(viajes_didier_ds)
+    actual_ds = aplicar_imputacion_valor_fijo(escuelas_data_ds)
 
     esperado_ds = spark_session.createDataFrame(
         [
-            (20101, 'Origen', 2),
-            (20302, 'Origen', 1),
+            (76, 'VIRGEN DE GUADALUPE', 1990, 1, 1, 101, 10111, 1, 1, 85, 43, 0, 0, 84, 44, 5, 4, 0, 0, -3, -1, 0, 0, 11, 6, 1, 0, 0, 0, 0, 6, 6, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 6, 6, 0, 0, 1, 1, 1, 1, 7, 7, 0, 0, 0, 23, 0, 21, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 99, 99, 1, 1, 1, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 48, 0, 0, 85, 48, 0, 0, 4, 0),
+            (80, 'VITALIA MADRIGAL ARAYA', 1908, 1, 1, 101, 10111, 1, 1, 100, 43, 0, 0, 84, 44, 5, 0, 0, 0, -3, -1, 0, 0, 11, 6, 1, 0, 0, 0, 0, 6, 6, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 6, 6, 0, 0, 1, 1, 1, 1, 7, 7, 0, 0, 0, 23, 0, 21, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 99, 99, 1, 1, 1, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 48, 0, 0, 85, 48, 0, 0, 4, 0),
         ],
-        ['Codigo_Postal', 'Origen_Destino', 'Cantidad_Total_Viajes'])
-
-    esperado_ds.show()
-    actual_ds.show()
-
-    assert actual_ds.collect() == esperado_ds.collect()    
-
-def test_total_viajes_por_codigo_postal_origen_precioKm_negativo_cero_null(spark_session):
-    viajes_didier_data = [(10000, 20101, 20105, 5.0, -600),
-                        (10000, 20302, 20105, 38.5, 290),
-                        (10001, 11504, 20101, 35.0, None),
-                        (10005, 20101, 60101, 100.8, 650),
-                        (10200, 20101, 11501, 22.3, 490),
-                        (10198, 11504, 11501, 2.0, 0)] 
-                                    
-    viajes_didier_ds = spark_session.createDataFrame(viajes_didier_data,
-                                              ['identificador', 'codigo_postal_origen', 'codigo_postal_destino', 'kilometros', 'precio_kilometro'])
-                                                
-
-    viajes_didier_ds.show()
-
-    actual_ds = obtener_total_viajes_por_codigo_postal_origen(viajes_didier_ds)
-
-    esperado_ds = spark_session.createDataFrame(
-        [
-            (20101, 'Origen', 2),
-            (20302, 'Origen', 1),
-        ],
-        ['Codigo_Postal', 'Origen_Destino', 'Cantidad_Total_Viajes'])
+        ['llave', 'nombre_ins', 'creacion00', 'direg15', 'cdpr15', 'cdcan15', 'cddis15', 'regplan15', 'zona15', 'mit_15', 'mih_15', 'rt_15', 'rh_15', 'aprobt_15', 'aprobh_15', 'reprot_15', 'reproh_15', 'desa_15', 'desah_15', 'desert_15', 'deserh_15', 'act_15', 'ach_15', 'nst_15', 'nsh_15', 'sit_15', 'sih_15', 'embt_15', 'embmenor_15', 'embmayor_15', 'aat15', 'aab15', 'apt15', 'apb15', 'aest15', 'aesb15', 'aaet15', 'aaeb15', 'anat15', 'anab15', 'inft15', 'infb15', 'olat15', 'olab15', 'salt15', 'salb15', 'comt15', 'comb15', 'bibt15', 'bibb15', 'gimt15', 'gimb15', 'talt_ai15', 'talb_ai15', 'otalt15', 'otalb15', 'sodt15', 'sodb15', 'indt15', 'indb15', 'lavt15', 'lavb15', 'sant15', 'sanb15', 'tvt15', 'tvb15', 'vbt15', 'vbb15', 'dvdt15', 'dvdb15', 'cetoi15', 'cetos15', 'cepei15', 'cepes15', 'cepai15', 'cepas15', 'ceadi15', 'ceads15', 'cptoi15', 'cptos15', 'cppei15', 'cppes15', 'cppai15', 'cppas15', 'cpadi15', 'cpads15', 'bib15', 'sal15', 'pla15', 'aux15', 'serv_int15', 'expto_15', 'expdef_15', 'exptem_15', 'agrve_15', 
+                        'agrvep_15', 'agrveo_15', 'agrfe_15', 'agrfep_15', 'agrfeo_15', 'agree_15', 'agreep_15', 'agreeo_15', 'agrre_15', 'agrrep_15', 'agrreo_15', 'agrde_15', 'agrdep_15', 'agrdeo_15', 'agroe_15', 'agroep_15', 'agroeo_15', 'int_15', 'inht_15', 'rit_15', 'rih_15', 'frt_15', 'frh_15', 'itt_15', 'ith_15', 'extrant_15', 'extranh_15'])
 
     esperado_ds.show()
     actual_ds.show()
 
     assert actual_ds.collect() == esperado_ds.collect()   
 
-def test_total_viajes_por_codigo_postal_origen_invalido(spark_session):
-    viajes_didier_data = [(10000,20101, 20105, 5.0, 600),
-                        (10005, None, 60101, 100.8, 650),
-                        (10198,None, 11501, 2.0, 0)] 
+# Se prueba la función aplicar_imputacion_valor_fijo cuando existen registros con null en la columna "creacion00" (que corresponde al año de creación de la escuela)
+# En este caso se espera que la función devuelva los mismos registros, pero haciendo el reemplazo del null en la columna "creacion00" por 2015 (que es el año del estudio)
+def test_aplicar_imputacion_valor_fijo_reemplaza_AnioCreacion_con_2015(spark_session):
+    escuelas_data = [(76, 'VIRGEN DE GUADALUPE', 1990, 1, 1, 101, 10111, 1, 1, 85, 43, 0, 0, 84, 44, 5, 4, 0, 0, -3, -1, 0, 0, 11, 6, 1, 0, 0, 0, 0, 6, 6, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 6, 6, 0, 0, 1, 1, 1, 1, 7, 7, 0, 0, 0, 23, 0, 21, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 99, 99, 1, 1, 1, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 48, 0, 0, 85, 48, 0, 0, 4, 0),
+                     (80, 'VITALIA MADRIGAL ARAYA', None, 1, 1, 101, 10111, 1, 1, 100, 43, 0, 0, 84, 44, 5, 0, 0, 0, -3, -1, 0, 0, 11, 6, 1, 0, 0, 0, 0, 6, 6, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 6, 6, 0, 0, 1, 1, 1, 1, 7, 7, 0, 0, 0, 23, 0, 21, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 99, 99, 1, 1, 1, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 48, 0, 0, 85, 48, 0, 0, 4, 0),
+                     (82, 'ANGLO AMERICANA', None, 1, 1, 101, 10112, 1, 1, 500, 250, 0, 0, 450, 200, 5, 0, 0, 0, -3, -1, 0, 0, 11, 6, 1, 0, 0, 0, 0, 6, 6, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 6, 6, 0, 0, 1, 1, 1, 1, 7, 7, 0, 0, 0, 23, 0, 21, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 99, 99, 1, 1, 1, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 48, 0, 0, 85, 48, 0, 0, 4, 0),
+                    ] 
                                     
-    viajes_didier_ds = spark_session.createDataFrame(viajes_didier_data,
-                                              ['identificador', 'codigo_postal_origen', 'codigo_postal_destino', 'kilometros', 'precio_kilometro'])
+    escuelas_data_ds = spark_session.createDataFrame(escuelas_data,
+                        ['llave', 'nombre_ins', 'creacion00', 'direg15', 'cdpr15', 'cdcan15', 'cddis15', 'regplan15', 'zona15', 'mit_15', 'mih_15', 'rt_15', 'rh_15', 'aprobt_15', 'aprobh_15', 'reprot_15', 'reproh_15', 'desa_15', 'desah_15', 'desert_15', 'deserh_15', 'act_15', 'ach_15', 'nst_15', 'nsh_15', 'sit_15', 'sih_15', 'embt_15', 'embmenor_15', 'embmayor_15', 'aat15', 'aab15', 'apt15', 'apb15', 'aest15', 'aesb15', 'aaet15', 'aaeb15', 'anat15', 'anab15', 'inft15', 'infb15', 'olat15', 'olab15', 'salt15', 'salb15', 'comt15', 'comb15', 'bibt15', 'bibb15', 'gimt15', 'gimb15', 'talt_ai15', 'talb_ai15', 'otalt15', 'otalb15', 'sodt15', 'sodb15', 'indt15', 'indb15', 'lavt15', 'lavb15', 'sant15', 'sanb15', 'tvt15', 'tvb15', 'vbt15', 'vbb15', 'dvdt15', 'dvdb15', 'cetoi15', 'cetos15', 'cepei15', 'cepes15', 'cepai15', 'cepas15', 'ceadi15', 'ceads15', 'cptoi15', 'cptos15', 'cppei15', 'cppes15', 'cppai15', 'cppas15', 'cpadi15', 'cpads15', 'bib15', 'sal15', 'pla15', 'aux15', 'serv_int15', 'expto_15', 'expdef_15', 'exptem_15', 'agrve_15', 
+                        'agrvep_15', 'agrveo_15', 'agrfe_15', 'agrfep_15', 'agrfeo_15', 'agree_15', 'agreep_15', 'agreeo_15', 'agrre_15', 'agrrep_15', 'agrreo_15', 'agrde_15', 'agrdep_15', 'agrdeo_15', 'agroe_15', 'agroep_15', 'agroeo_15', 'int_15', 'inht_15', 'rit_15', 'rih_15', 'frt_15', 'frh_15', 'itt_15', 'ith_15', 'extrant_15', 'extranh_15'])
                                                 
 
-    viajes_didier_ds.show()
+    escuelas_data_ds.show()
 
-    actual_ds = obtener_total_viajes_por_codigo_postal_origen(viajes_didier_ds)
-    
+    actual_ds = aplicar_imputacion_valor_fijo(escuelas_data_ds)
+
     esperado_ds = spark_session.createDataFrame(
         [
-            (20101, 'Origen', 1),
+            (76, 'VIRGEN DE GUADALUPE', 1990, 1, 1, 101, 10111, 1, 1, 85, 43, 0, 0, 84, 44, 5, 4, 0, 0, -3, -1, 0, 0, 11, 6, 1, 0, 0, 0, 0, 6, 6, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 6, 6, 0, 0, 1, 1, 1, 1, 7, 7, 0, 0, 0, 23, 0, 21, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 99, 99, 1, 1, 1, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 48, 0, 0, 85, 48, 0, 0, 4, 0),
+            (80, 'VITALIA MADRIGAL ARAYA', 2015, 1, 1, 101, 10111, 1, 1, 100, 43, 0, 0, 84, 44, 5, 0, 0, 0, -3, -1, 0, 0, 11, 6, 1, 0, 0, 0, 0, 6, 6, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 6, 6, 0, 0, 1, 1, 1, 1, 7, 7, 0, 0, 0, 23, 0, 21, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 99, 99, 1, 1, 1, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 48, 0, 0, 85, 48, 0, 0, 4, 0),
+            (82, 'ANGLO AMERICANA', 2015, 1, 1, 101, 10112, 1, 1, 500, 250, 0, 0, 450, 200, 5, 0, 0, 0, -3, -1, 0, 0, 11, 6, 1, 0, 0, 0, 0, 6, 6, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 6, 6, 0, 0, 1, 1, 1, 1, 7, 7, 0, 0, 0, 23, 0, 21, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 99, 99, 1, 1, 1, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 48, 0, 0, 85, 48, 0, 0, 4, 0),
         ],
-        ['Codigo_Postal', 'Origen_Destino', 'Cantidad_Total_Viajes'])
+        ['llave', 'nombre_ins', 'creacion00', 'direg15', 'cdpr15', 'cdcan15', 'cddis15', 'regplan15', 'zona15', 'mit_15', 'mih_15', 'rt_15', 'rh_15', 'aprobt_15', 'aprobh_15', 'reprot_15', 'reproh_15', 'desa_15', 'desah_15', 'desert_15', 'deserh_15', 'act_15', 'ach_15', 'nst_15', 'nsh_15', 'sit_15', 'sih_15', 'embt_15', 'embmenor_15', 'embmayor_15', 'aat15', 'aab15', 'apt15', 'apb15', 'aest15', 'aesb15', 'aaet15', 'aaeb15', 'anat15', 'anab15', 'inft15', 'infb15', 'olat15', 'olab15', 'salt15', 'salb15', 'comt15', 'comb15', 'bibt15', 'bibb15', 'gimt15', 'gimb15', 'talt_ai15', 'talb_ai15', 'otalt15', 'otalb15', 'sodt15', 'sodb15', 'indt15', 'indb15', 'lavt15', 'lavb15', 'sant15', 'sanb15', 'tvt15', 'tvb15', 'vbt15', 'vbb15', 'dvdt15', 'dvdb15', 'cetoi15', 'cetos15', 'cepei15', 'cepes15', 'cepai15', 'cepas15', 'ceadi15', 'ceads15', 'cptoi15', 'cptos15', 'cppei15', 'cppes15', 'cppai15', 'cppas15', 'cpadi15', 'cpads15', 'bib15', 'sal15', 'pla15', 'aux15', 'serv_int15', 'expto_15', 'expdef_15', 'exptem_15', 'agrve_15', 
+                        'agrvep_15', 'agrveo_15', 'agrfe_15', 'agrfep_15', 'agrfeo_15', 'agree_15', 'agreep_15', 'agreeo_15', 'agrre_15', 'agrrep_15', 'agrreo_15', 'agrde_15', 'agrdep_15', 'agrdeo_15', 'agroe_15', 'agroep_15', 'agroeo_15', 'int_15', 'inht_15', 'rit_15', 'rih_15', 'frt_15', 'frh_15', 'itt_15', 'ith_15', 'extrant_15', 'extranh_15'])
 
     esperado_ds.show()
     actual_ds.show()
 
-    assert actual_ds.collect() == esperado_ds.collect()
+    assert actual_ds.collect() == esperado_ds.collect()     
 
-#Pruebas para la función obtener_total_viajes_por_codigo_postal_destino
-
-def test_total_viajes_por_codigo_postal_destino_1_viaje_por_codigo_postal(spark_session):
-    viajes_didier_data = [(10000, 20101, 20105, 5.0, 600),
-                        (10000, 20302, 20106, 38.5, 290),
-                        (10001, 11504, 20101, 20.0, 800)] 
+# Se prueba la función aplicar_imputacion_valor_fijo cuando los campos de todas las columnas están completos, es decir, ninguno tiene null, 
+# en este caso se espera que la función no aplique ningún cambio al dataframe y devuelva los mismos datos
+def test_aplicar_imputacion_valor_fijo_todos_los_campos_sin_null(spark_session):
+    escuelas_data = [(76, 'VIRGEN DE GUADALUPE', 1990, 1, 1, 101, 10111, 1, 1, 85, 43, 0, 0, 84, 44, 5, 4, 0, 0, -3, -1, 0, 0, 11, 6, 1, 0, 0, 0, 0, 6, 6, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 6, 6, 0, 0, 1, 1, 1, 1, 7, 7, 0, 0, 0, 23, 0, 21, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 99, 99, 1, 1, 1, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 48, 0, 0, 85, 48, 0, 0, 4, 0),
+                     (80, 'VITALIA MADRIGAL ARAYA', 1908, 1, 1, 101, 10111, 1, 1, 100, 43, 0, 0, 84, 44, 5, 4, 0, 0, -3, -1, 0, 0, 11, 6, 1, 0, 0, 0, 0, 6, 6, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 6, 6, 0, 0, 1, 1, 1, 1, 7, 7, 0, 0, 0, 23, 0, 21, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 99, 99, 1, 1, 1, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 48, 0, 0, 85, 48, 0, 0, 4, 0),
+                    ] 
                                     
-    viajes_didier_ds = spark_session.createDataFrame(viajes_didier_data,
-                                              ['identificador', 'codigo_postal_origen', 'codigo_postal_destino', 'kilometros', 'precio_kilometro'])
+    escuelas_data_ds = spark_session.createDataFrame(escuelas_data,
+                        ['llave', 'nombre_ins', 'creacion00', 'direg15', 'cdpr15', 'cdcan15', 'cddis15', 'regplan15', 'zona15', 'mit_15', 'mih_15', 'rt_15', 'rh_15', 'aprobt_15', 'aprobh_15', 'reprot_15', 'reproh_15', 'desa_15', 'desah_15', 'desert_15', 'deserh_15', 'act_15', 'ach_15', 'nst_15', 'nsh_15', 'sit_15', 'sih_15', 'embt_15', 'embmenor_15', 'embmayor_15', 'aat15', 'aab15', 'apt15', 'apb15', 'aest15', 'aesb15', 'aaet15', 'aaeb15', 'anat15', 'anab15', 'inft15', 'infb15', 'olat15', 'olab15', 'salt15', 'salb15', 'comt15', 'comb15', 'bibt15', 'bibb15', 'gimt15', 'gimb15', 'talt_ai15', 'talb_ai15', 'otalt15', 'otalb15', 'sodt15', 'sodb15', 'indt15', 'indb15', 'lavt15', 'lavb15', 'sant15', 'sanb15', 'tvt15', 'tvb15', 'vbt15', 'vbb15', 'dvdt15', 'dvdb15', 'cetoi15', 'cetos15', 'cepei15', 'cepes15', 'cepai15', 'cepas15', 'ceadi15', 'ceads15', 'cptoi15', 'cptos15', 'cppei15', 'cppes15', 'cppai15', 'cppas15', 'cpadi15', 'cpads15', 'bib15', 'sal15', 'pla15', 'aux15', 'serv_int15', 'expto_15', 'expdef_15', 'exptem_15', 'agrve_15', 
+                        'agrvep_15', 'agrveo_15', 'agrfe_15', 'agrfep_15', 'agrfeo_15', 'agree_15', 'agreep_15', 'agreeo_15', 'agrre_15', 'agrrep_15', 'agrreo_15', 'agrde_15', 'agrdep_15', 'agrdeo_15', 'agroe_15', 'agroep_15', 'agroeo_15', 'int_15', 'inht_15', 'rit_15', 'rih_15', 'frt_15', 'frh_15', 'itt_15', 'ith_15', 'extrant_15', 'extranh_15'])
                                                 
 
-    viajes_didier_ds.show()
+    escuelas_data_ds.show()
 
-    actual_ds = obtener_total_viajes_por_codigo_postal_destino(viajes_didier_ds)
+    actual_ds = aplicar_imputacion_valor_fijo(escuelas_data_ds)
 
     esperado_ds = spark_session.createDataFrame(
         [
-            (20101, 'Destino', 1),
-            (20105, 'Destino', 1),
-            (20106, 'Destino', 1),
+            (76, 'VIRGEN DE GUADALUPE', 1990, 1, 1, 101, 10111, 1, 1, 85, 43, 0, 0, 84, 44, 5, 4, 0, 0, -3, -1, 0, 0, 11, 6, 1, 0, 0, 0, 0, 6, 6, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 6, 6, 0, 0, 1, 1, 1, 1, 7, 7, 0, 0, 0, 23, 0, 21, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 99, 99, 1, 1, 1, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 48, 0, 0, 85, 48, 0, 0, 4, 0),
+            (80, 'VITALIA MADRIGAL ARAYA', 1908, 1, 1, 101, 10111, 1, 1, 100, 43, 0, 0, 84, 44, 5, 4, 0, 0, -3, -1, 0, 0, 11, 6, 1, 0, 0, 0, 0, 6, 6, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 6, 6, 0, 0, 1, 1, 1, 1, 7, 7, 0, 0, 0, 23, 0, 21, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 99, 99, 1, 1, 1, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 48, 0, 0, 85, 48, 0, 0, 4, 0),
         ],
-        ['Codigo_Postal', 'Origen_Destino', 'Cantidad_Total_Viajes'])
-
-    esperado_ds.show()
-    actual_ds.show()
-
-    assert actual_ds.collect() == esperado_ds.collect() 
-
-def test_total_viajes_por_codigo_postal_destino_varios_viajes_por_codigo_postal(spark_session):
-
-
-    viajes_didier_data = [(10000, 20101, 20105, 5.0, 600),
-                        (10000, 20302, 20105, 38.5, 290),
-                        (10001, 11504, 20101, 20.0, 800),
-                        (10200, 20101, 11501, 22.3, 490),
-                        (10198, 11504, 11501, 2.0, 500)] 
-                                    
-    viajes_didier_ds = spark_session.createDataFrame(viajes_didier_data,
-                                              ['identificador', 'codigo_postal_origen', 'codigo_postal_destino', 'kilometros', 'precio_kilometro'])
-                                                
-
-    viajes_didier_ds.show()
-
-    actual_ds = obtener_total_viajes_por_codigo_postal_destino(viajes_didier_ds)
-
-    esperado_ds = spark_session.createDataFrame(
-        [
-            (11501, 'Destino', 2),
-            (20101, 'Destino', 1),
-            (20105, 'Destino', 2),
-        ],
-        ['Codigo_Postal', 'Origen_Destino', 'Cantidad_Total_Viajes'])
-
-    esperado_ds.show()
-    actual_ds.show()
-
-    assert actual_ds.collect() == esperado_ds.collect()   
-
-def test_total_viajes_por_codigo_postal_destino_mismo_viaje_varias_veces(spark_session):
-    viajes_didier_data = [(10000, 20101, 20105, 5.0, 600),
-                        (10000, 20101, 20105, 5.0, 600),
-                        (10000, 20101, 20105, 5.0, 600)] 
-                                    
-    viajes_didier_ds = spark_session.createDataFrame(viajes_didier_data,
-                                              ['identificador', 'codigo_postal_origen', 'codigo_postal_destino', 'kilometros', 'precio_kilometro'])
-                                                
-
-    viajes_didier_ds.show()
-
-    actual_ds = obtener_total_viajes_por_codigo_postal_destino(viajes_didier_ds)
-
-    esperado_ds = spark_session.createDataFrame(
-        [
-            (20105, 'Destino', 3),
-        ],
-        ['Codigo_Postal', 'Origen_Destino', 'Cantidad_Total_Viajes'])
+        ['llave', 'nombre_ins', 'creacion00', 'direg15', 'cdpr15', 'cdcan15', 'cddis15', 'regplan15', 'zona15', 'mit_15', 'mih_15', 'rt_15', 'rh_15', 'aprobt_15', 'aprobh_15', 'reprot_15', 'reproh_15', 'desa_15', 'desah_15', 'desert_15', 'deserh_15', 'act_15', 'ach_15', 'nst_15', 'nsh_15', 'sit_15', 'sih_15', 'embt_15', 'embmenor_15', 'embmayor_15', 'aat15', 'aab15', 'apt15', 'apb15', 'aest15', 'aesb15', 'aaet15', 'aaeb15', 'anat15', 'anab15', 'inft15', 'infb15', 'olat15', 'olab15', 'salt15', 'salb15', 'comt15', 'comb15', 'bibt15', 'bibb15', 'gimt15', 'gimb15', 'talt_ai15', 'talb_ai15', 'otalt15', 'otalb15', 'sodt15', 'sodb15', 'indt15', 'indb15', 'lavt15', 'lavb15', 'sant15', 'sanb15', 'tvt15', 'tvb15', 'vbt15', 'vbb15', 'dvdt15', 'dvdb15', 'cetoi15', 'cetos15', 'cepei15', 'cepes15', 'cepai15', 'cepas15', 'ceadi15', 'ceads15', 'cptoi15', 'cptos15', 'cppei15', 'cppes15', 'cppai15', 'cppas15', 'cpadi15', 'cpads15', 'bib15', 'sal15', 'pla15', 'aux15', 'serv_int15', 'expto_15', 'expdef_15', 'exptem_15', 'agrve_15', 
+                        'agrvep_15', 'agrveo_15', 'agrfe_15', 'agrfep_15', 'agrfeo_15', 'agree_15', 'agreep_15', 'agreeo_15', 'agrre_15', 'agrrep_15', 'agrreo_15', 'agrde_15', 'agrdep_15', 'agrdeo_15', 'agroe_15', 'agroep_15', 'agroeo_15', 'int_15', 'inht_15', 'rit_15', 'rih_15', 'frt_15', 'frh_15', 'itt_15', 'ith_15', 'extrant_15', 'extranh_15'])
 
     esperado_ds.show()
     actual_ds.show()
 
     assert actual_ds.collect() == esperado_ds.collect()    
 
-def test_total_viajes_por_codigo_postal_destino_kilometros_negativos_cero_null(spark_session):
-    viajes_didier_data = [(10000, 20101, 20105, -5.0, 600),
-                        (10000, 20302, 20105, 38.5, 290),
-                        (10001, 11504, 20101, None, 800),
-                        (10005, 20101, 60101, 100.8, 650),
-                        (10200, 20101, 11501, 22.3, 490),
-                        (10198, 11504, 11501, 0.0, 500)] 
+#################################################################
+# Se prueba la función aplicar_imputacion_con_la_media cuando existen registros con null en las columnas "aat15" (que corresponde a "Aulas para impartir lecciones I y II ciclos total") 
+# o "aab15" (que corresponde a "Aulas para impartir lecciones I y II ciclos buenas")
+# En este caso se espera que la función devuelva los mismos registros, pero haciendo el reemplazo del valor null por la media de la columna (redondeada, dado que el campo es un integer) 
+def test_aplicar_imputacion_con_la_media_columnas_aat15_y_aab15_con_null(spark_session):
+    escuelas_data = [(76, 'VIRGEN DE GUADALUPE', 1990, 1, 1, 101, 10111, 1, 1, 85, 43, 0, 0, 84, 44, 5, 4, 0, 0, -3, -1, 0, 0, 11, 6, 1, 0, 0, 0, 0, 6, 6, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 6, 6, 0, 0, 1, 1, 1, 1, 7, 7, 0, 0, 0, 23, 0, 21, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 99, 99, 1, 1, 1, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 48, 0, 0, 85, 48, 0, 0, 4, 0),
+                    (80, 'VITALIA MADRIGAL ARAYA', 1908, 1, 1, 101, 10111, 1, 1, 100, 43, 0, 0, 84, 44, 5, 0, 0, 0, -3, -1, 0, 0, 11, 6, 1, 0, 0, 0, 0, 7, 7, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 6, 6, 0, 0, 1, 1, 1, 1, 7, 7, 0, 0, 0, 23, 0, 21, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 99, 99, 1, 1, 1, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 48, 0, 0, 85, 48, 0, 0, 4, 0),
+                    (82, 'ANGLO AMERICANA', 1949, 1, 1, 101, 10112, 1, 1, 500, 250, 0, 0, 450, 200, 5, 0, 0, 0, -3, -1, 0, 0, 11, 6, 1, 0, 0, 0, 0, 30, 30, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 6, 6, 0, 0, 1, 1, 1, 1, 7, 7, 0, 0, 0, 23, 0, 21, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 99, 99, 1, 1, 1, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 48, 0, 0, 85, 48, 0, 0, 4, 0),
+                    (90, 'LAS LETRAS', 1992, 1, 1, 101, 10112, 1, 1, 500, 250, 0, 0, 450, 200, 5, 0, 0, 0, -3, -1, 0, 0, 11, 6, 1, 0, 0, 0, 0, None, None, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 6, 6, 0, 0, 1, 1, 1, 1, 7, 7, 0, 0, 0, 23, 0, 21, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 99, 99, 1, 1, 1, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 48, 0, 0, 85, 48, 0, 0, 4, 0),
+                    ] 
                                     
-    viajes_didier_ds = spark_session.createDataFrame(viajes_didier_data,
-                                              ['identificador', 'codigo_postal_origen', 'codigo_postal_destino', 'kilometros', 'precio_kilometro'])
+    escuelas_data_ds = spark_session.createDataFrame(escuelas_data,
+                        ['llave', 'nombre_ins', 'creacion00', 'direg15', 'cdpr15', 'cdcan15', 'cddis15', 'regplan15', 'zona15', 'mit_15', 'mih_15', 'rt_15', 'rh_15', 'aprobt_15', 'aprobh_15', 'reprot_15', 'reproh_15', 'desa_15', 'desah_15', 'desert_15', 'deserh_15', 'act_15', 'ach_15', 'nst_15', 'nsh_15', 'sit_15', 'sih_15', 'embt_15', 'embmenor_15', 'embmayor_15', 'aat15', 'aab15', 'apt15', 'apb15', 'aest15', 'aesb15', 'aaet15', 'aaeb15', 'anat15', 'anab15', 'inft15', 'infb15', 'olat15', 'olab15', 'salt15', 'salb15', 'comt15', 'comb15', 'bibt15', 'bibb15', 'gimt15', 'gimb15', 'talt_ai15', 'talb_ai15', 'otalt15', 'otalb15', 'sodt15', 'sodb15', 'indt15', 'indb15', 'lavt15', 'lavb15', 'sant15', 'sanb15', 'tvt15', 'tvb15', 'vbt15', 'vbb15', 'dvdt15', 'dvdb15', 'cetoi15', 'cetos15', 'cepei15', 'cepes15', 'cepai15', 'cepas15', 'ceadi15', 'ceads15', 'cptoi15', 'cptos15', 'cppei15', 'cppes15', 'cppai15', 'cppas15', 'cpadi15', 'cpads15', 'bib15', 'sal15', 'pla15', 'aux15', 'serv_int15', 'expto_15', 'expdef_15', 'exptem_15', 'agrve_15', 
+                        'agrvep_15', 'agrveo_15', 'agrfe_15', 'agrfep_15', 'agrfeo_15', 'agree_15', 'agreep_15', 'agreeo_15', 'agrre_15', 'agrrep_15', 'agrreo_15', 'agrde_15', 'agrdep_15', 'agrdeo_15', 'agroe_15', 'agroep_15', 'agroeo_15', 'int_15', 'inht_15', 'rit_15', 'rih_15', 'frt_15', 'frh_15', 'itt_15', 'ith_15', 'extrant_15', 'extranh_15'])
                                                 
 
-    viajes_didier_ds.show()
+    escuelas_data_ds.show()
 
-    actual_ds = obtener_total_viajes_por_codigo_postal_destino(viajes_didier_ds)
+    actual_ds = aplicar_imputacion_con_la_media(escuelas_data_ds)
 
     esperado_ds = spark_session.createDataFrame(
         [
-            (11501, 'Destino', 1),
-            (20105, 'Destino', 1),
-            (60101, 'Destino', 1),
+ (76, 'VIRGEN DE GUADALUPE', 1990, 1, 1, 101, 10111, 1, 1, 85, 43, 0, 0, 84, 44, 5, 4, 0, 0, -3, -1, 0, 0, 11, 6, 1, 0, 0, 0, 0, 6, 6, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 6, 6, 0, 0, 1, 1, 1, 1, 7, 7, 0, 0, 0, 23, 0, 21, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 99, 99, 1, 1, 1, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 48, 0, 0, 85, 48, 0, 0, 4, 0),
+                    (80, 'VITALIA MADRIGAL ARAYA', 1908, 1, 1, 101, 10111, 1, 1, 100, 43, 0, 0, 84, 44, 5, 0, 0, 0, -3, -1, 0, 0, 11, 6, 1, 0, 0, 0, 0, 7, 7, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 6, 6, 0, 0, 1, 1, 1, 1, 7, 7, 0, 0, 0, 23, 0, 21, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 99, 99, 1, 1, 1, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 48, 0, 0, 85, 48, 0, 0, 4, 0),
+                    (82, 'ANGLO AMERICANA', 1949, 1, 1, 101, 10112, 1, 1, 500, 250, 0, 0, 450, 200, 5, 0, 0, 0, -3, -1, 0, 0, 11, 6, 1, 0, 0, 0, 0, 30, 30, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 6, 6, 0, 0, 1, 1, 1, 1, 7, 7, 0, 0, 0, 23, 0, 21, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 99, 99, 1, 1, 1, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 48, 0, 0, 85, 48, 0, 0, 4, 0),
+                    (90, 'LAS LETRAS', 1992, 1, 1, 101, 10112, 1, 1, 500, 250, 0, 0, 450, 200, 5, 0, 0, 0, -3, -1, 0, 0, 11, 6, 1, 0, 0, 0, 0, 14, 14, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 6, 6, 0, 0, 1, 1, 1, 1, 7, 7, 0, 0, 0, 23, 0, 21, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 99, 99, 1, 1, 1, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 48, 0, 0, 85, 48, 0, 0, 4, 0),
         ],
-        ['Codigo_Postal', 'Origen_Destino', 'Cantidad_Total_Viajes'])
-
-    esperado_ds.show()
-    actual_ds.show()
-
-    assert actual_ds.collect() == esperado_ds.collect()    
-
-def test_total_viajes_por_codigo_postal_destino_precioKm_negativo_cero_null(spark_session):
-    viajes_didier_data = [(10000, 20101, 20105, 5.0, -600),
-                        (10000, 20302, 20105, 38.5, 290),
-                        (10001, 11504, 20101, 35.0, None),
-                        (10005, 20101, 60101, 100.8, 650),
-                        (10200, 20101, 11501, 22.3, 490),
-                        (10198, 11504, 11501, 2.0, 0)] 
-                                    
-    viajes_didier_ds = spark_session.createDataFrame(viajes_didier_data,
-                                              ['identificador', 'codigo_postal_origen', 'codigo_postal_destino', 'kilometros', 'precio_kilometro'])
-                                                
-
-    viajes_didier_ds.show()
-
-    actual_ds = obtener_total_viajes_por_codigo_postal_destino(viajes_didier_ds)
-
-    esperado_ds = spark_session.createDataFrame(
-        [
-            (11501, 'Destino', 1),
-            (20105, 'Destino', 1),
-            (60101, 'Destino', 1),
-        ],
-        ['Codigo_Postal', 'Origen_Destino', 'Cantidad_Total_Viajes'])
-
-    esperado_ds.show()
-    actual_ds.show()
-
-    assert actual_ds.collect() == esperado_ds.collect()   
-
-def test_total_viajes_por_codigo_postal_destino_invalido(spark_session):
-    viajes_didier_data = [(10000,20105 , 20101, 5.0, 600),
-                        (10005, 60101, None, 100.8, 650),
-                        (10198,11501 , None, 2.0, 0)] 
-                                    
-    viajes_didier_ds = spark_session.createDataFrame(viajes_didier_data,
-                                              ['identificador', 'codigo_postal_origen', 'codigo_postal_destino', 'kilometros', 'precio_kilometro'])
-                                                
-
-    viajes_didier_ds.show()
-
-    actual_ds = obtener_total_viajes_por_codigo_postal_destino(viajes_didier_ds)
-    
-    esperado_ds = spark_session.createDataFrame(
-        [
-            (20101, 'Destino', 1), 
-        ],
-        ['Codigo_Postal', 'Origen_Destino', 'Cantidad_Total_Viajes'])
+        ['llave', 'nombre_ins', 'creacion00', 'direg15', 'cdpr15', 'cdcan15', 'cddis15', 'regplan15', 'zona15', 'mit_15', 'mih_15', 'rt_15', 'rh_15', 'aprobt_15', 'aprobh_15', 'reprot_15', 'reproh_15', 'desa_15', 'desah_15', 'desert_15', 'deserh_15', 'act_15', 'ach_15', 'nst_15', 'nsh_15', 'sit_15', 'sih_15', 'embt_15', 'embmenor_15', 'embmayor_15', 'aat15', 'aab15', 'apt15', 'apb15', 'aest15', 'aesb15', 'aaet15', 'aaeb15', 'anat15', 'anab15', 'inft15', 'infb15', 'olat15', 'olab15', 'salt15', 'salb15', 'comt15', 'comb15', 'bibt15', 'bibb15', 'gimt15', 'gimb15', 'talt_ai15', 'talb_ai15', 'otalt15', 'otalb15', 'sodt15', 'sodb15', 'indt15', 'indb15', 'lavt15', 'lavb15', 'sant15', 'sanb15', 'tvt15', 'tvb15', 'vbt15', 'vbb15', 'dvdt15', 'dvdb15', 'cetoi15', 'cetos15', 'cepei15', 'cepes15', 'cepai15', 'cepas15', 'ceadi15', 'ceads15', 'cptoi15', 'cptos15', 'cppei15', 'cppes15', 'cppai15', 'cppas15', 'cpadi15', 'cpads15', 'bib15', 'sal15', 'pla15', 'aux15', 'serv_int15', 'expto_15', 'expdef_15', 'exptem_15', 'agrve_15', 
+                        'agrvep_15', 'agrveo_15', 'agrfe_15', 'agrfep_15', 'agrfeo_15', 'agree_15', 'agreep_15', 'agreeo_15', 'agrre_15', 'agrrep_15', 'agrreo_15', 'agrde_15', 'agrdep_15', 'agrdeo_15', 'agroe_15', 'agroep_15', 'agroeo_15', 'int_15', 'inht_15', 'rit_15', 'rih_15', 'frt_15', 'frh_15', 'itt_15', 'ith_15', 'extrant_15', 'extranh_15'])
 
     esperado_ds.show()
     actual_ds.show()
 
     assert actual_ds.collect() == esperado_ds.collect()  
 
-# Pruebas para la función unir_dataframes 
-def test_unir_dataframes_total_viajes_por_codigo_postal_origen_destino_verifica_datos(spark_session):
-    total_viajes_por_codigo_postal_origen_data = [(11504, 'Origen', 2),
-                                                (20101, 'Origen', 3),
-                                                (20302, 'Origen', 1)]
-
-    total_viajes_por_codigo_postal_origen_ds = spark_session.createDataFrame(total_viajes_por_codigo_postal_origen_data,
-                                              ['Codigo_Postal', 'Origen_Destino', 'Cantidad_Total_Viajes'])
+# Se prueba la función aplicar_imputacion_con_la_media cuando los campos de las columnas "aat15" y "aab15" están completos, es decir, ninguno tiene null, 
+# en este caso se espera que la función no aplique ningún cambio al dataframe y devuelva los mismos datos
+def test_aplicar_imputacion_con_la_media_todos_los_campos_sin_null(spark_session):
+    escuelas_data = [(76, 'VIRGEN DE GUADALUPE', 1990, 1, 1, 101, 10111, 1, 1, 85, 43, 0, 0, 84, 44, 5, 4, 0, 0, -3, -1, 0, 0, 11, 6, 1, 0, 0, 0, 0, 6, 6, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 6, 6, 0, 0, 1, 1, 1, 1, 7, 7, 0, 0, 0, 23, 0, 21, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 99, 99, 1, 1, 1, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 48, 0, 0, 85, 48, 0, 0, 4, 0),
+                    (80, 'VITALIA MADRIGAL ARAYA', 1908, 1, 1, 101, 10111, 1, 1, 100, 43, 0, 0, 84, 44, 5, 0, 0, 0, -3, -1, 0, 0, 11, 6, 1, 0, 0, 0, 0, 7, 7, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 6, 6, 0, 0, 1, 1, 1, 1, 7, 7, 0, 0, 0, 23, 0, 21, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 99, 99, 1, 1, 1, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 48, 0, 0, 85, 48, 0, 0, 4, 0),
+                    (82, 'ANGLO AMERICANA', 1949, 1, 1, 101, 10112, 1, 1, 500, 250, 0, 0, 450, 200, 5, 0, 0, 0, -3, -1, 0, 0, 11, 6, 1, 0, 0, 0, 0, 30, 30, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 6, 6, 0, 0, 1, 1, 1, 1, 7, 7, 0, 0, 0, 23, 0, 21, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 99, 99, 1, 1, 1, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 48, 0, 0, 85, 48, 0, 0, 4, 0),
+                    (90, 'LAS LETRAS', 1992, 1, 1, 101, 10112, 1, 1, 500, 250, 0, 0, 450, 200, 5, 0, 0, 0, -3, -1, 0, 0, 11, 6, 1, 0, 0, 0, 0, 30, 30, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 6, 6, 0, 0, 1, 1, 1, 1, 7, 7, 0, 0, 0, 23, 0, 21, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 99, 99, 1, 1, 1, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 48, 0, 0, 85, 48, 0, 0, 4, 0),
+                    ] 
+                                    
+    escuelas_data_ds = spark_session.createDataFrame(escuelas_data,
+                        ['llave', 'nombre_ins', 'creacion00', 'direg15', 'cdpr15', 'cdcan15', 'cddis15', 'regplan15', 'zona15', 'mit_15', 'mih_15', 'rt_15', 'rh_15', 'aprobt_15', 'aprobh_15', 'reprot_15', 'reproh_15', 'desa_15', 'desah_15', 'desert_15', 'deserh_15', 'act_15', 'ach_15', 'nst_15', 'nsh_15', 'sit_15', 'sih_15', 'embt_15', 'embmenor_15', 'embmayor_15', 'aat15', 'aab15', 'apt15', 'apb15', 'aest15', 'aesb15', 'aaet15', 'aaeb15', 'anat15', 'anab15', 'inft15', 'infb15', 'olat15', 'olab15', 'salt15', 'salb15', 'comt15', 'comb15', 'bibt15', 'bibb15', 'gimt15', 'gimb15', 'talt_ai15', 'talb_ai15', 'otalt15', 'otalb15', 'sodt15', 'sodb15', 'indt15', 'indb15', 'lavt15', 'lavb15', 'sant15', 'sanb15', 'tvt15', 'tvb15', 'vbt15', 'vbb15', 'dvdt15', 'dvdb15', 'cetoi15', 'cetos15', 'cepei15', 'cepes15', 'cepai15', 'cepas15', 'ceadi15', 'ceads15', 'cptoi15', 'cptos15', 'cppei15', 'cppes15', 'cppai15', 'cppas15', 'cpadi15', 'cpads15', 'bib15', 'sal15', 'pla15', 'aux15', 'serv_int15', 'expto_15', 'expdef_15', 'exptem_15', 'agrve_15', 
+                        'agrvep_15', 'agrveo_15', 'agrfe_15', 'agrfep_15', 'agrfeo_15', 'agree_15', 'agreep_15', 'agreeo_15', 'agrre_15', 'agrrep_15', 'agrreo_15', 'agrde_15', 'agrdep_15', 'agrdeo_15', 'agroe_15', 'agroep_15', 'agroeo_15', 'int_15', 'inht_15', 'rit_15', 'rih_15', 'frt_15', 'frh_15', 'itt_15', 'ith_15', 'extrant_15', 'extranh_15'])
                                                 
-    total_viajes_por_codigo_postal_destino_data = [ (11501, 'Destino', 3),
-                                                    (20101, 'Destino', 3)]
 
-    total_viajes_por_codigo_postal_destino_ds = spark_session.createDataFrame(total_viajes_por_codigo_postal_destino_data,
-                                              ['Codigo_Postal', 'Origen_Destino', 'Cantidad_Total_Viajes'])
-                                                
-    
-    actual_ds = unir_dataframes(total_viajes_por_codigo_postal_origen_ds, total_viajes_por_codigo_postal_destino_ds)
+    escuelas_data_ds.show()
+
+    actual_ds = aplicar_imputacion_con_la_media(escuelas_data_ds)
 
     esperado_ds = spark_session.createDataFrame(
         [
-            (11504, 'Origen', 2),
-            (20101, 'Origen', 3),
-            (20302, 'Origen', 1),
-            (11501, 'Destino', 3),
-            (20101, 'Destino', 3),
+            (76, 'VIRGEN DE GUADALUPE', 1990, 1, 1, 101, 10111, 1, 1, 85, 43, 0, 0, 84, 44, 5, 4, 0, 0, -3, -1, 0, 0, 11, 6, 1, 0, 0, 0, 0, 6, 6, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 6, 6, 0, 0, 1, 1, 1, 1, 7, 7, 0, 0, 0, 23, 0, 21, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 99, 99, 1, 1, 1, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 48, 0, 0, 85, 48, 0, 0, 4, 0),
+                    (80, 'VITALIA MADRIGAL ARAYA', 1908, 1, 1, 101, 10111, 1, 1, 100, 43, 0, 0, 84, 44, 5, 0, 0, 0, -3, -1, 0, 0, 11, 6, 1, 0, 0, 0, 0, 7, 7, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 6, 6, 0, 0, 1, 1, 1, 1, 7, 7, 0, 0, 0, 23, 0, 21, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 99, 99, 1, 1, 1, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 48, 0, 0, 85, 48, 0, 0, 4, 0),
+                    (82, 'ANGLO AMERICANA', 1949, 1, 1, 101, 10112, 1, 1, 500, 250, 0, 0, 450, 200, 5, 0, 0, 0, -3, -1, 0, 0, 11, 6, 1, 0, 0, 0, 0, 30, 30, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 6, 6, 0, 0, 1, 1, 1, 1, 7, 7, 0, 0, 0, 23, 0, 21, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 99, 99, 1, 1, 1, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 48, 0, 0, 85, 48, 0, 0, 4, 0),
+                    (90, 'LAS LETRAS', 1992, 1, 1, 101, 10112, 1, 1, 500, 250, 0, 0, 450, 200, 5, 0, 0, 0, -3, -1, 0, 0, 11, 6, 1, 0, 0, 0, 0, 30, 30, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 6, 6, 0, 0, 1, 1, 1, 1, 7, 7, 0, 0, 0, 23, 0, 21, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 99, 99, 1, 1, 1, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 48, 0, 0, 85, 48, 0, 0, 4, 0),
         ],
-        ['Codigo_Postal', 'Origen_Destino', 'Cantidad_Total_Viajes'])
+        ['llave', 'nombre_ins', 'creacion00', 'direg15', 'cdpr15', 'cdcan15', 'cddis15', 'regplan15', 'zona15', 'mit_15', 'mih_15', 'rt_15', 'rh_15', 'aprobt_15', 'aprobh_15', 'reprot_15', 'reproh_15', 'desa_15', 'desah_15', 'desert_15', 'deserh_15', 'act_15', 'ach_15', 'nst_15', 'nsh_15', 'sit_15', 'sih_15', 'embt_15', 'embmenor_15', 'embmayor_15', 'aat15', 'aab15', 'apt15', 'apb15', 'aest15', 'aesb15', 'aaet15', 'aaeb15', 'anat15', 'anab15', 'inft15', 'infb15', 'olat15', 'olab15', 'salt15', 'salb15', 'comt15', 'comb15', 'bibt15', 'bibb15', 'gimt15', 'gimb15', 'talt_ai15', 'talb_ai15', 'otalt15', 'otalb15', 'sodt15', 'sodb15', 'indt15', 'indb15', 'lavt15', 'lavb15', 'sant15', 'sanb15', 'tvt15', 'tvb15', 'vbt15', 'vbb15', 'dvdt15', 'dvdb15', 'cetoi15', 'cetos15', 'cepei15', 'cepes15', 'cepai15', 'cepas15', 'ceadi15', 'ceads15', 'cptoi15', 'cptos15', 'cppei15', 'cppes15', 'cppai15', 'cppas15', 'cpadi15', 'cpads15', 'bib15', 'sal15', 'pla15', 'aux15', 'serv_int15', 'expto_15', 'expdef_15', 'exptem_15', 'agrve_15', 
+                        'agrvep_15', 'agrveo_15', 'agrfe_15', 'agrfep_15', 'agrfeo_15', 'agree_15', 'agreep_15', 'agreeo_15', 'agrre_15', 'agrrep_15', 'agrreo_15', 'agrde_15', 'agrdep_15', 'agrdeo_15', 'agroe_15', 'agroep_15', 'agroeo_15', 'int_15', 'inht_15', 'rit_15', 'rih_15', 'frt_15', 'frh_15', 'itt_15', 'ith_15', 'extrant_15', 'extranh_15'])
+
+    esperado_ds.show()
+    actual_ds.show()
+
+    assert actual_ds.collect() == esperado_ds.collect()    
+
+#################################################################
+# Se prueba la función corregir_columnas_negativas cuando existen registros negativos en las columnas 'desert_15' o 'deserh_15'
+# En este caso se espera que la función devuelva los mismos registros, pero haciendo el reemplazo del valor negativo por un 0
+def test_corregir_columnas_negativas_desert15_y_deserh15(spark_session):
+    escuelas_data = [(76, 'VIRGEN DE GUADALUPE', 1990, 1, 1, 101, 10111, 1, 1, 85, 43, 0, 0, 84, 44, 5, 4, 0, 0, -3, -1, 0, 0, 11, 6, 1, 0, 0, 0, 0, 6, 6, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 6, 6, 0, 0, 1, 1, 1, 1, 7, 7, 0, 0, 0, 23, 0, 21, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 99, 99, 1, 1, 1, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 48, 0, 0, 85, 48, 0, 0, 4, 0),
+                    (80, 'VITALIA MADRIGAL ARAYA', 1908, 1, 1, 101, 10111, 1, 1, 100, 43, 0, 0, 84, 44, 5, 0, 0, 0, -2, -1, 0, 0, 11, 6, 1, 0, 0, 0, 0, 7, 7, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 6, 6, 0, 0, 1, 1, 1, 1, 7, 7, 0, 0, 0, 23, 0, 21, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 99, 99, 1, 1, 1, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 48, 0, 0, 85, 48, 0, 0, 4, 0),
+                    (82, 'ANGLO AMERICANA', 1949, 1, 1, 101, 10112, 1, 1, 500, 250, 0, 0, 450, 200, 5, 0, 0, 0, -10, -5, 0, 0, 11, 6, 1, 0, 0, 0, 0, 30, 30, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 6, 6, 0, 0, 1, 1, 1, 1, 7, 7, 0, 0, 0, 23, 0, 21, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 99, 99, 1, 1, 1, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 48, 0, 0, 85, 48, 0, 0, 4, 0),
+                    ] 
+                                    
+    escuelas_data_ds = spark_session.createDataFrame(escuelas_data,
+                        ['llave', 'nombre_ins', 'creacion00', 'direg15', 'cdpr15', 'cdcan15', 'cddis15', 'regplan15', 'zona15', 'mit_15', 'mih_15', 'rt_15', 'rh_15', 'aprobt_15', 'aprobh_15', 'reprot_15', 'reproh_15', 'desa_15', 'desah_15', 'desert_15', 'deserh_15', 'act_15', 'ach_15', 'nst_15', 'nsh_15', 'sit_15', 'sih_15', 'embt_15', 'embmenor_15', 'embmayor_15', 'aat15', 'aab15', 'apt15', 'apb15', 'aest15', 'aesb15', 'aaet15', 'aaeb15', 'anat15', 'anab15', 'inft15', 'infb15', 'olat15', 'olab15', 'salt15', 'salb15', 'comt15', 'comb15', 'bibt15', 'bibb15', 'gimt15', 'gimb15', 'talt_ai15', 'talb_ai15', 'otalt15', 'otalb15', 'sodt15', 'sodb15', 'indt15', 'indb15', 'lavt15', 'lavb15', 'sant15', 'sanb15', 'tvt15', 'tvb15', 'vbt15', 'vbb15', 'dvdt15', 'dvdb15', 'cetoi15', 'cetos15', 'cepei15', 'cepes15', 'cepai15', 'cepas15', 'ceadi15', 'ceads15', 'cptoi15', 'cptos15', 'cppei15', 'cppes15', 'cppai15', 'cppas15', 'cpadi15', 'cpads15', 'bib15', 'sal15', 'pla15', 'aux15', 'serv_int15', 'expto_15', 'expdef_15', 'exptem_15', 'agrve_15', 
+                        'agrvep_15', 'agrveo_15', 'agrfe_15', 'agrfep_15', 'agrfeo_15', 'agree_15', 'agreep_15', 'agreeo_15', 'agrre_15', 'agrrep_15', 'agrreo_15', 'agrde_15', 'agrdep_15', 'agrdeo_15', 'agroe_15', 'agroep_15', 'agroeo_15', 'int_15', 'inht_15', 'rit_15', 'rih_15', 'frt_15', 'frh_15', 'itt_15', 'ith_15', 'extrant_15', 'extranh_15'])
+                                                
+
+    escuelas_data_ds.show()
+
+    actual_ds = corregir_columnas_negativas(escuelas_data_ds)
+
+    esperado_ds = spark_session.createDataFrame(
+        [
+                    (76, 'VIRGEN DE GUADALUPE', 1990, 1, 1, 101, 10111, 1, 1, 85, 43, 0, 0, 84, 44, 5, 4, 0, 0, 0, 0, 0, 0, 11, 6, 1, 0, 0, 0, 0, 6, 6, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 6, 6, 0, 0, 1, 1, 1, 1, 7, 7, 0, 0, 0, 23, 0, 21, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 99, 99, 1, 1, 1, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 48, 0, 0, 85, 48, 0, 0, 4, 0),
+                    (80, 'VITALIA MADRIGAL ARAYA', 1908, 1, 1, 101, 10111, 1, 1, 100, 43, 0, 0, 84, 44, 5, 0, 0, 0, 0, 0, 0, 0, 11, 6, 1, 0, 0, 0, 0, 7, 7, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 6, 6, 0, 0, 1, 1, 1, 1, 7, 7, 0, 0, 0, 23, 0, 21, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 99, 99, 1, 1, 1, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 48, 0, 0, 85, 48, 0, 0, 4, 0),
+                    (82, 'ANGLO AMERICANA', 1949, 1, 1, 101, 10112, 1, 1, 500, 250, 0, 0, 450, 200, 5, 0, 0, 0, 0, 0, 0, 0, 11, 6, 1, 0, 0, 0, 0, 30, 30, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 6, 6, 0, 0, 1, 1, 1, 1, 7, 7, 0, 0, 0, 23, 0, 21, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 99, 99, 1, 1, 1, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 48, 0, 0, 85, 48, 0, 0, 4, 0),
+        ],
+        ['llave', 'nombre_ins', 'creacion00', 'direg15', 'cdpr15', 'cdcan15', 'cddis15', 'regplan15', 'zona15', 'mit_15', 'mih_15', 'rt_15', 'rh_15', 'aprobt_15', 'aprobh_15', 'reprot_15', 'reproh_15', 'desa_15', 'desah_15', 'desert_15', 'deserh_15', 'act_15', 'ach_15', 'nst_15', 'nsh_15', 'sit_15', 'sih_15', 'embt_15', 'embmenor_15', 'embmayor_15', 'aat15', 'aab15', 'apt15', 'apb15', 'aest15', 'aesb15', 'aaet15', 'aaeb15', 'anat15', 'anab15', 'inft15', 'infb15', 'olat15', 'olab15', 'salt15', 'salb15', 'comt15', 'comb15', 'bibt15', 'bibb15', 'gimt15', 'gimb15', 'talt_ai15', 'talb_ai15', 'otalt15', 'otalb15', 'sodt15', 'sodb15', 'indt15', 'indb15', 'lavt15', 'lavb15', 'sant15', 'sanb15', 'tvt15', 'tvb15', 'vbt15', 'vbb15', 'dvdt15', 'dvdb15', 'cetoi15', 'cetos15', 'cepei15', 'cepes15', 'cepai15', 'cepas15', 'ceadi15', 'ceads15', 'cptoi15', 'cptos15', 'cppei15', 'cppes15', 'cppai15', 'cppas15', 'cpadi15', 'cpads15', 'bib15', 'sal15', 'pla15', 'aux15', 'serv_int15', 'expto_15', 'expdef_15', 'exptem_15', 'agrve_15', 
+                        'agrvep_15', 'agrveo_15', 'agrfe_15', 'agrfep_15', 'agrfeo_15', 'agree_15', 'agreep_15', 'agreeo_15', 'agrre_15', 'agrrep_15', 'agrreo_15', 'agrde_15', 'agrdep_15', 'agrdeo_15', 'agroe_15', 'agroep_15', 'agroeo_15', 'int_15', 'inht_15', 'rit_15', 'rih_15', 'frt_15', 'frh_15', 'itt_15', 'ith_15', 'extrant_15', 'extranh_15'])
 
     esperado_ds.show()
     actual_ds.show()
 
     assert actual_ds.collect() == esperado_ds.collect()  
 
-def test_unir_dataframes_total_viajes_por_codigo_postal_origen_destino_verifica_cantidad_registros(spark_session):
-    total_viajes_por_codigo_postal_origen_data = [(11504, 'Origen', 2),
-                                                (20101, 'Origen', 3),
-                                                (20302, 'Origen', 1)]
-
-    total_viajes_por_codigo_postal_origen_ds = spark_session.createDataFrame(total_viajes_por_codigo_postal_origen_data,
-                                              ['Codigo_Postal', 'Origen_Destino', 'Cantidad_Total_Viajes'])
-                                                
-    total_viajes_por_codigo_postal_destino_data = [ (11501, 'Destino', 3),
-                                                    (20101, 'Destino', 3)]
-
-    total_viajes_por_codigo_postal_destino_ds = spark_session.createDataFrame(total_viajes_por_codigo_postal_destino_data,
-                                              ['Codigo_Postal', 'Origen_Destino', 'Cantidad_Total_Viajes'])
-                                                
-    
-    actual_ds = unir_dataframes(total_viajes_por_codigo_postal_origen_ds, total_viajes_por_codigo_postal_destino_ds)
-    actual = actual_ds.count()
-
-    esperado = total_viajes_por_codigo_postal_origen_ds.count() + total_viajes_por_codigo_postal_destino_ds.count()
-
-    assert actual == esperado                         
-
-#Pruebas para la función obtener_total_ingresos_por_codigo_postal_origen
-
-def test_total_ingresos_por_codigo_postal_origen_1_viaje_por_codigo_postal(spark_session):
-    viajes_didier_data = [(10000, 20101, 20105, 5.0, 600),
-                        (10000, 20302, 20105, 38.5, 290),
-                        (10001, 11504, 20101, 20.0, 800)] 
+# Se prueba la función corregir_columnas_negativas cuando los campos de las columnas desert_15 y deserh_15 están completos, es decir, ninguno tiene null, 
+# en este caso se espera que la función no aplique ningún cambio al dataframe y devuelva los mismos datos
+def test_corregir_columnas_negativas_columnas_desert15_y_deserh15_sin_nulos(spark_session):
+    escuelas_data = [(76, 'VIRGEN DE GUADALUPE', 1990, 1, 1, 101, 10111, 1, 1, 85, 43, 0, 0, 84, 44, 5, 4, 0, 0, 3, 1, 0, 0, 11, 6, 1, 0, 0, 0, 0, 6, 6, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 6, 6, 0, 0, 1, 1, 1, 1, 7, 7, 0, 0, 0, 23, 0, 21, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 99, 99, 1, 1, 1, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 48, 0, 0, 85, 48, 0, 0, 4, 0),
+                    (80, 'VITALIA MADRIGAL ARAYA', 1908, 1, 1, 101, 10111, 1, 1, 100, 43, 0, 0, 84, 44, 5, 0, 0, 0, 2, 1, 0, 0, 11, 6, 1, 0, 0, 0, 0, 7, 7, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 6, 6, 0, 0, 1, 1, 1, 1, 7, 7, 0, 0, 0, 23, 0, 21, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 99, 99, 1, 1, 1, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 48, 0, 0, 85, 48, 0, 0, 4, 0),
+                    (82, 'ANGLO AMERICANA', 1949, 1, 1, 101, 10112, 1, 1, 500, 250, 0, 0, 450, 200, 5, 0, 0, 0, 10, 5, 0, 0, 11, 6, 1, 0, 0, 0, 0, 30, 30, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 6, 6, 0, 0, 1, 1, 1, 1, 7, 7, 0, 0, 0, 23, 0, 21, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 99, 99, 1, 1, 1, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 48, 0, 0, 85, 48, 0, 0, 4, 0),
+                    ] 
                                     
-    viajes_didier_ds = spark_session.createDataFrame(viajes_didier_data,
-                                              ['identificador', 'codigo_postal_origen', 'codigo_postal_destino', 'kilometros', 'precio_kilometro'])
+    escuelas_data_ds = spark_session.createDataFrame(escuelas_data,
+                        ['llave', 'nombre_ins', 'creacion00', 'direg15', 'cdpr15', 'cdcan15', 'cddis15', 'regplan15', 'zona15', 'mit_15', 'mih_15', 'rt_15', 'rh_15', 'aprobt_15', 'aprobh_15', 'reprot_15', 'reproh_15', 'desa_15', 'desah_15', 'desert_15', 'deserh_15', 'act_15', 'ach_15', 'nst_15', 'nsh_15', 'sit_15', 'sih_15', 'embt_15', 'embmenor_15', 'embmayor_15', 'aat15', 'aab15', 'apt15', 'apb15', 'aest15', 'aesb15', 'aaet15', 'aaeb15', 'anat15', 'anab15', 'inft15', 'infb15', 'olat15', 'olab15', 'salt15', 'salb15', 'comt15', 'comb15', 'bibt15', 'bibb15', 'gimt15', 'gimb15', 'talt_ai15', 'talb_ai15', 'otalt15', 'otalb15', 'sodt15', 'sodb15', 'indt15', 'indb15', 'lavt15', 'lavb15', 'sant15', 'sanb15', 'tvt15', 'tvb15', 'vbt15', 'vbb15', 'dvdt15', 'dvdb15', 'cetoi15', 'cetos15', 'cepei15', 'cepes15', 'cepai15', 'cepas15', 'ceadi15', 'ceads15', 'cptoi15', 'cptos15', 'cppei15', 'cppes15', 'cppai15', 'cppas15', 'cpadi15', 'cpads15', 'bib15', 'sal15', 'pla15', 'aux15', 'serv_int15', 'expto_15', 'expdef_15', 'exptem_15', 'agrve_15', 
+                        'agrvep_15', 'agrveo_15', 'agrfe_15', 'agrfep_15', 'agrfeo_15', 'agree_15', 'agreep_15', 'agreeo_15', 'agrre_15', 'agrrep_15', 'agrreo_15', 'agrde_15', 'agrdep_15', 'agrdeo_15', 'agroe_15', 'agroep_15', 'agroeo_15', 'int_15', 'inht_15', 'rit_15', 'rih_15', 'frt_15', 'frh_15', 'itt_15', 'ith_15', 'extrant_15', 'extranh_15'])
                                                 
 
-    viajes_didier_ds.show()
+    escuelas_data_ds.show()
 
-    actual_ds = obtener_total_ingresos_por_codigo_postal_origen(viajes_didier_ds)
+    actual_ds = corregir_columnas_negativas(escuelas_data_ds)
 
     esperado_ds = spark_session.createDataFrame(
         [
-            (11504, 'Origen', 16000.0),
-            (20101, 'Origen', 3000.0),
-            (20302, 'Origen', 11165.0),
+                    (76, 'VIRGEN DE GUADALUPE', 1990, 1, 1, 101, 10111, 1, 1, 85, 43, 0, 0, 84, 44, 5, 4, 0, 0, 3, 1, 0, 0, 11, 6, 1, 0, 0, 0, 0, 6, 6, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 6, 6, 0, 0, 1, 1, 1, 1, 7, 7, 0, 0, 0, 23, 0, 21, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 99, 99, 1, 1, 1, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 48, 0, 0, 85, 48, 0, 0, 4, 0),
+                    (80, 'VITALIA MADRIGAL ARAYA', 1908, 1, 1, 101, 10111, 1, 1, 100, 43, 0, 0, 84, 44, 5, 0, 0, 0, 2, 1, 0, 0, 11, 6, 1, 0, 0, 0, 0, 7, 7, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 6, 6, 0, 0, 1, 1, 1, 1, 7, 7, 0, 0, 0, 23, 0, 21, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 99, 99, 1, 1, 1, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 48, 0, 0, 85, 48, 0, 0, 4, 0),
+                    (82, 'ANGLO AMERICANA', 1949, 1, 1, 101, 10112, 1, 1, 500, 250, 0, 0, 450, 200, 5, 0, 0, 0, 10, 5, 0, 0, 11, 6, 1, 0, 0, 0, 0, 30, 30, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 6, 6, 0, 0, 1, 1, 1, 1, 7, 7, 0, 0, 0, 23, 0, 21, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 99, 99, 1, 1, 1, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 48, 0, 0, 85, 48, 0, 0, 4, 0),
+
         ],
-        ['Codigo_Postal', 'Origen_Destino', 'Cantidad_Total_Ingresos'])
+        ['llave', 'nombre_ins', 'creacion00', 'direg15', 'cdpr15', 'cdcan15', 'cddis15', 'regplan15', 'zona15', 'mit_15', 'mih_15', 'rt_15', 'rh_15', 'aprobt_15', 'aprobh_15', 'reprot_15', 'reproh_15', 'desa_15', 'desah_15', 'desert_15', 'deserh_15', 'act_15', 'ach_15', 'nst_15', 'nsh_15', 'sit_15', 'sih_15', 'embt_15', 'embmenor_15', 'embmayor_15', 'aat15', 'aab15', 'apt15', 'apb15', 'aest15', 'aesb15', 'aaet15', 'aaeb15', 'anat15', 'anab15', 'inft15', 'infb15', 'olat15', 'olab15', 'salt15', 'salb15', 'comt15', 'comb15', 'bibt15', 'bibb15', 'gimt15', 'gimb15', 'talt_ai15', 'talb_ai15', 'otalt15', 'otalb15', 'sodt15', 'sodb15', 'indt15', 'indb15', 'lavt15', 'lavb15', 'sant15', 'sanb15', 'tvt15', 'tvb15', 'vbt15', 'vbb15', 'dvdt15', 'dvdb15', 'cetoi15', 'cetos15', 'cepei15', 'cepes15', 'cepai15', 'cepas15', 'ceadi15', 'ceads15', 'cptoi15', 'cptos15', 'cppei15', 'cppes15', 'cppai15', 'cppas15', 'cpadi15', 'cpads15', 'bib15', 'sal15', 'pla15', 'aux15', 'serv_int15', 'expto_15', 'expdef_15', 'exptem_15', 'agrve_15', 
+                        'agrvep_15', 'agrveo_15', 'agrfe_15', 'agrfep_15', 'agrfeo_15', 'agree_15', 'agreep_15', 'agreeo_15', 'agrre_15', 'agrrep_15', 'agrreo_15', 'agrde_15', 'agrdep_15', 'agrdeo_15', 'agroe_15', 'agroep_15', 'agroeo_15', 'int_15', 'inht_15', 'rit_15', 'rih_15', 'frt_15', 'frh_15', 'itt_15', 'ith_15', 'extrant_15', 'extranh_15'])
 
     esperado_ds.show()
     actual_ds.show()
 
-    assert actual_ds.collect() == esperado_ds.collect() 
+    assert actual_ds.collect() == esperado_ds.collect()                
 
-def test_total_ingresos_por_codigo_postal_origen_varios_viajes_por_codigo_postal(spark_session):
-
-
-    viajes_didier_data = [(10000, 20101, 20105, 5.0, 600),
-                        (10000, 20302, 20105, 38.5, 290),
-                        (10001, 11504, 20101, 20.0, 800),
-                        (10005, 20101, 60101, 100.8, 650),
-                        (10200, 20101, 11501, 22.3, 490),
-                        (10198, 11504, 11501, 2.0, 500)] 
+#################################################################
+# Se prueba la función aplicar_imputacion_aprobados cuando existen registros en la columna 'aprobt_15' (cantidad de aprobados total) 
+# cuyo valor es mayor a la cantidad total de estudiantes matriculados (es decir, es un valor inconsistente) 
+# En este caso se espera que se reemplacen dichos valores con la siguiente fórmula: aprobt_15 = mit_15 - reprot_15 - desa_15 - desert_15
+# (cantidad de aprobados total = cantidad de matriculados total - cantidad de reprobados total - cantidad de abandono total - cantidad con exclusión intra-anual total)
+def test_aplicar_imputacion_aprobados_con_valores_mayores_a_matriculados_columna_aprobt15(spark_session):
+    escuelas_data = [(76, 'VIRGEN DE GUADALUPE', 1990, 1, 1, 101, 10111, 1, 1, 85, 43, 0, 0, 80, 40, 5, 4, 0, 0, 0, 0, 0, 0, 11, 6, 1, 0, 0, 0, 0, 6, 6, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 6, 6, 0, 0, 1, 1, 1, 1, 7, 7, 0, 0, 0, 23, 0, 21, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 99, 99, 1, 1, 1, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 48, 0, 0, 85, 48, 0, 0, 4, 0),
+                    (80, 'VITALIA MADRIGAL ARAYA', 1908, 1, 1, 101, 10111, 1, 1, 100, 43, 0, 0, 114, 40, 5, 0, 0, 0, 0, 0, 0, 0, 11, 6, 1, 0, 0, 0, 0, 7, 7, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 6, 6, 0, 0, 1, 1, 1, 1, 7, 7, 0, 0, 0, 23, 0, 21, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 99, 99, 1, 1, 1, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 48, 0, 0, 85, 48, 0, 0, 4, 0),
+                    (82, 'ANGLO AMERICANA', 1949, 1, 1, 101, 10112, 1, 1, 500, 250, 0, 0, 600, 200, 5, 0, 0, 0, 0, 0, 0, 0, 11, 6, 1, 0, 0, 0, 0, 30, 30, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 6, 6, 0, 0, 1, 1, 1, 1, 7, 7, 0, 0, 0, 23, 0, 21, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 99, 99, 1, 1, 1, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 48, 0, 0, 85, 48, 0, 0, 4, 0),
+                    ] 
                                     
-    viajes_didier_ds = spark_session.createDataFrame(viajes_didier_data,
-                                              ['identificador', 'codigo_postal_origen', 'codigo_postal_destino', 'kilometros', 'precio_kilometro'])
+    escuelas_data_ds = spark_session.createDataFrame(escuelas_data,
+                        ['llave', 'nombre_ins', 'creacion00', 'direg15', 'cdpr15', 'cdcan15', 'cddis15', 'regplan15', 'zona15', 'mit_15', 'mih_15', 'rt_15', 'rh_15', 'aprobt_15', 'aprobh_15', 'reprot_15', 'reproh_15', 'desa_15', 'desah_15', 'desert_15', 'deserh_15', 'act_15', 'ach_15', 'nst_15', 'nsh_15', 'sit_15', 'sih_15', 'embt_15', 'embmenor_15', 'embmayor_15', 'aat15', 'aab15', 'apt15', 'apb15', 'aest15', 'aesb15', 'aaet15', 'aaeb15', 'anat15', 'anab15', 'inft15', 'infb15', 'olat15', 'olab15', 'salt15', 'salb15', 'comt15', 'comb15', 'bibt15', 'bibb15', 'gimt15', 'gimb15', 'talt_ai15', 'talb_ai15', 'otalt15', 'otalb15', 'sodt15', 'sodb15', 'indt15', 'indb15', 'lavt15', 'lavb15', 'sant15', 'sanb15', 'tvt15', 'tvb15', 'vbt15', 'vbb15', 'dvdt15', 'dvdb15', 'cetoi15', 'cetos15', 'cepei15', 'cepes15', 'cepai15', 'cepas15', 'ceadi15', 'ceads15', 'cptoi15', 'cptos15', 'cppei15', 'cppes15', 'cppai15', 'cppas15', 'cpadi15', 'cpads15', 'bib15', 'sal15', 'pla15', 'aux15', 'serv_int15', 'expto_15', 'expdef_15', 'exptem_15', 'agrve_15', 
+                        'agrvep_15', 'agrveo_15', 'agrfe_15', 'agrfep_15', 'agrfeo_15', 'agree_15', 'agreep_15', 'agreeo_15', 'agrre_15', 'agrrep_15', 'agrreo_15', 'agrde_15', 'agrdep_15', 'agrdeo_15', 'agroe_15', 'agroep_15', 'agroeo_15', 'int_15', 'inht_15', 'rit_15', 'rih_15', 'frt_15', 'frh_15', 'itt_15', 'ith_15', 'extrant_15', 'extranh_15'])
                                                 
 
-    viajes_didier_ds.show()
+    escuelas_data_ds.show()
 
-    actual_ds = obtener_total_ingresos_por_codigo_postal_origen(viajes_didier_ds)
+    actual_ds = aplicar_imputacion_aprobados(escuelas_data_ds)
 
     esperado_ds = spark_session.createDataFrame(
         [
-            (11504, 'Origen', 17000.0),
-            (20101, 'Origen', 79447.0),
-            (20302, 'Origen', 11165.0),
+                    (76, 'VIRGEN DE GUADALUPE', 1990, 1, 1, 101, 10111, 1, 1, 85, 43, 0, 0, 80, 40, 5, 4, 0, 0, 0, 0, 0, 0, 11, 6, 1, 0, 0, 0, 0, 6, 6, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 6, 6, 0, 0, 1, 1, 1, 1, 7, 7, 0, 0, 0, 23, 0, 21, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 99, 99, 1, 1, 1, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 48, 0, 0, 85, 48, 0, 0, 4, 0),
+                    (80, 'VITALIA MADRIGAL ARAYA', 1908, 1, 1, 101, 10111, 1, 1, 100, 43, 0, 0, 95, 40, 5, 0, 0, 0, 0, 0, 0, 0, 11, 6, 1, 0, 0, 0, 0, 7, 7, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 6, 6, 0, 0, 1, 1, 1, 1, 7, 7, 0, 0, 0, 23, 0, 21, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 99, 99, 1, 1, 1, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 48, 0, 0, 85, 48, 0, 0, 4, 0),
+                    (82, 'ANGLO AMERICANA', 1949, 1, 1, 101, 10112, 1, 1, 500, 250, 0, 0, 495, 200, 5, 0, 0, 0, 0, 0, 0, 0, 11, 6, 1, 0, 0, 0, 0, 30, 30, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 6, 6, 0, 0, 1, 1, 1, 1, 7, 7, 0, 0, 0, 23, 0, 21, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 99, 99, 1, 1, 1, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 48, 0, 0, 85, 48, 0, 0, 4, 0),
         ],
-        ['Codigo_Postal', 'Origen_Destino', 'Cantidad_Total_Ingresos'])
+        ['llave', 'nombre_ins', 'creacion00', 'direg15', 'cdpr15', 'cdcan15', 'cddis15', 'regplan15', 'zona15', 'mit_15', 'mih_15', 'rt_15', 'rh_15', 'aprobt_15', 'aprobh_15', 'reprot_15', 'reproh_15', 'desa_15', 'desah_15', 'desert_15', 'deserh_15', 'act_15', 'ach_15', 'nst_15', 'nsh_15', 'sit_15', 'sih_15', 'embt_15', 'embmenor_15', 'embmayor_15', 'aat15', 'aab15', 'apt15', 'apb15', 'aest15', 'aesb15', 'aaet15', 'aaeb15', 'anat15', 'anab15', 'inft15', 'infb15', 'olat15', 'olab15', 'salt15', 'salb15', 'comt15', 'comb15', 'bibt15', 'bibb15', 'gimt15', 'gimb15', 'talt_ai15', 'talb_ai15', 'otalt15', 'otalb15', 'sodt15', 'sodb15', 'indt15', 'indb15', 'lavt15', 'lavb15', 'sant15', 'sanb15', 'tvt15', 'tvb15', 'vbt15', 'vbb15', 'dvdt15', 'dvdb15', 'cetoi15', 'cetos15', 'cepei15', 'cepes15', 'cepai15', 'cepas15', 'ceadi15', 'ceads15', 'cptoi15', 'cptos15', 'cppei15', 'cppes15', 'cppai15', 'cppas15', 'cpadi15', 'cpads15', 'bib15', 'sal15', 'pla15', 'aux15', 'serv_int15', 'expto_15', 'expdef_15', 'exptem_15', 'agrve_15', 
+                        'agrvep_15', 'agrveo_15', 'agrfe_15', 'agrfep_15', 'agrfeo_15', 'agree_15', 'agreep_15', 'agreeo_15', 'agrre_15', 'agrrep_15', 'agrreo_15', 'agrde_15', 'agrdep_15', 'agrdeo_15', 'agroe_15', 'agroep_15', 'agroeo_15', 'int_15', 'inht_15', 'rit_15', 'rih_15', 'frt_15', 'frh_15', 'itt_15', 'ith_15', 'extrant_15', 'extranh_15'])
 
     esperado_ds.show()
     actual_ds.show()
 
-    assert actual_ds.collect() == esperado_ds.collect()   
+    assert actual_ds.collect() == esperado_ds.collect()  
 
-def test_total_ingresos_por_codigo_postal_origen_mismo_viaje_varias_veces(spark_session):
-    viajes_didier_data = [(10000, 20101, 20105, 5.0, 600),
-                        (10000, 20101, 20105, 5.0, 600),
-                        (10000, 20101, 20105, 5.0, 600)] 
+# Se prueba la función aplicar_imputacion_aprobados cuando existen registros en la columna 'aprobh_15' (cantidad de aprobados hombres)
+# cuyo valor es mayor a la cantidad total de estudiantes matriculados hombres (es decir, es un valor inconsistente) 
+# En este caso se espera que se reemplacen dichos valores con la siguiente fórmula: aprobh_15 = mih_15 - reproh_15 - desah_15 - deserh_15
+# (cantidad de aprobados hombres = cantidad de matriculados hombres - cantidad de reprobados hombres - cantidad de abandono hombres - cantidad con exclusión intra-anual hombres)
+def test_aplicar_imputacion_aprobados_con_valores_mayores_a_matriculados_columna_aprobh15(spark_session):
+    escuelas_data = [(76, 'VIRGEN DE GUADALUPE', 1990, 1, 1, 101, 10111, 1, 1, 85, 43, 0, 0, 80, 40, 5, 4, 0, 0, 0, 0, 0, 0, 11, 6, 1, 0, 0, 0, 0, 6, 6, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 6, 6, 0, 0, 1, 1, 1, 1, 7, 7, 0, 0, 0, 23, 0, 21, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 99, 99, 1, 1, 1, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 48, 0, 0, 85, 48, 0, 0, 4, 0),
+                    (80, 'VITALIA MADRIGAL ARAYA', 1908, 1, 1, 101, 10111, 1, 1, 100, 43, 0, 0, 95, 50, 5, 0, 0, 0, 0, 0, 0, 0, 11, 6, 1, 0, 0, 0, 0, 7, 7, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 6, 6, 0, 0, 1, 1, 1, 1, 7, 7, 0, 0, 0, 23, 0, 21, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 99, 99, 1, 1, 1, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 48, 0, 0, 85, 48, 0, 0, 4, 0),
+                    (82, 'ANGLO AMERICANA', 1949, 1, 1, 101, 10112, 1, 1, 500, 250, 0, 0, 495, 450, 5, 0, 0, 0, 0, 0, 0, 0, 11, 6, 1, 0, 0, 0, 0, 30, 30, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 6, 6, 0, 0, 1, 1, 1, 1, 7, 7, 0, 0, 0, 23, 0, 21, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 99, 99, 1, 1, 1, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 48, 0, 0, 85, 48, 0, 0, 4, 0),
+                    ] 
                                     
-    viajes_didier_ds = spark_session.createDataFrame(viajes_didier_data,
-                                              ['identificador', 'codigo_postal_origen', 'codigo_postal_destino', 'kilometros', 'precio_kilometro'])
+    escuelas_data_ds = spark_session.createDataFrame(escuelas_data,
+                        ['llave', 'nombre_ins', 'creacion00', 'direg15', 'cdpr15', 'cdcan15', 'cddis15', 'regplan15', 'zona15', 'mit_15', 'mih_15', 'rt_15', 'rh_15', 'aprobt_15', 'aprobh_15', 'reprot_15', 'reproh_15', 'desa_15', 'desah_15', 'desert_15', 'deserh_15', 'act_15', 'ach_15', 'nst_15', 'nsh_15', 'sit_15', 'sih_15', 'embt_15', 'embmenor_15', 'embmayor_15', 'aat15', 'aab15', 'apt15', 'apb15', 'aest15', 'aesb15', 'aaet15', 'aaeb15', 'anat15', 'anab15', 'inft15', 'infb15', 'olat15', 'olab15', 'salt15', 'salb15', 'comt15', 'comb15', 'bibt15', 'bibb15', 'gimt15', 'gimb15', 'talt_ai15', 'talb_ai15', 'otalt15', 'otalb15', 'sodt15', 'sodb15', 'indt15', 'indb15', 'lavt15', 'lavb15', 'sant15', 'sanb15', 'tvt15', 'tvb15', 'vbt15', 'vbb15', 'dvdt15', 'dvdb15', 'cetoi15', 'cetos15', 'cepei15', 'cepes15', 'cepai15', 'cepas15', 'ceadi15', 'ceads15', 'cptoi15', 'cptos15', 'cppei15', 'cppes15', 'cppai15', 'cppas15', 'cpadi15', 'cpads15', 'bib15', 'sal15', 'pla15', 'aux15', 'serv_int15', 'expto_15', 'expdef_15', 'exptem_15', 'agrve_15', 
+                        'agrvep_15', 'agrveo_15', 'agrfe_15', 'agrfep_15', 'agrfeo_15', 'agree_15', 'agreep_15', 'agreeo_15', 'agrre_15', 'agrrep_15', 'agrreo_15', 'agrde_15', 'agrdep_15', 'agrdeo_15', 'agroe_15', 'agroep_15', 'agroeo_15', 'int_15', 'inht_15', 'rit_15', 'rih_15', 'frt_15', 'frh_15', 'itt_15', 'ith_15', 'extrant_15', 'extranh_15'])
                                                 
 
-    viajes_didier_ds.show()
+    escuelas_data_ds.show()
 
-    actual_ds = obtener_total_ingresos_por_codigo_postal_origen(viajes_didier_ds)
+    actual_ds = aplicar_imputacion_aprobados(escuelas_data_ds)
 
     esperado_ds = spark_session.createDataFrame(
         [
-            (20101, 'Origen', 9000.0),
+                    (76, 'VIRGEN DE GUADALUPE', 1990, 1, 1, 101, 10111, 1, 1, 85, 43, 0, 0, 80, 40, 5, 4, 0, 0, 0, 0, 0, 0, 11, 6, 1, 0, 0, 0, 0, 6, 6, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 6, 6, 0, 0, 1, 1, 1, 1, 7, 7, 0, 0, 0, 23, 0, 21, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 99, 99, 1, 1, 1, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 48, 0, 0, 85, 48, 0, 0, 4, 0),
+                    (80, 'VITALIA MADRIGAL ARAYA', 1908, 1, 1, 101, 10111, 1, 1, 100, 43, 0, 0, 95, 43, 5, 0, 0, 0, 0, 0, 0, 0, 11, 6, 1, 0, 0, 0, 0, 7, 7, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 6, 6, 0, 0, 1, 1, 1, 1, 7, 7, 0, 0, 0, 23, 0, 21, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 99, 99, 1, 1, 1, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 48, 0, 0, 85, 48, 0, 0, 4, 0),
+                    (82, 'ANGLO AMERICANA', 1949, 1, 1, 101, 10112, 1, 1, 500, 250, 0, 0, 495, 250, 5, 0, 0, 0, 0, 0, 0, 0, 11, 6, 1, 0, 0, 0, 0, 30, 30, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 6, 6, 0, 0, 1, 1, 1, 1, 7, 7, 0, 0, 0, 23, 0, 21, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 99, 99, 1, 1, 1, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 48, 0, 0, 85, 48, 0, 0, 4, 0),
         ],
-        ['Codigo_Postal', 'Origen_Destino', 'Cantidad_Total_Ingresos'])
-
-    esperado_ds.show()
-    actual_ds.show()
-
-    assert actual_ds.collect() == esperado_ds.collect()    
-
-def test_total_ingresos_por_codigo_postal_origen_kilometros_negativos_cero_null(spark_session):
-    viajes_didier_data = [(10000, 20101, 20105, -5.0, 600),
-                        (10000, 20302, 20105, 38.5, 290),
-                        (10001, 11504, 20101, None, 800),
-                        (10005, 20101, 60101, 100.8, 650),
-                        (10200, 20101, 11501, 22.3, 490),
-                        (10198, 11504, 11501, 0.0, 500)] 
-                                    
-    viajes_didier_ds = spark_session.createDataFrame(viajes_didier_data,
-                                              ['identificador', 'codigo_postal_origen', 'codigo_postal_destino', 'kilometros', 'precio_kilometro'])
-                                                
-
-    viajes_didier_ds.show()
-
-    actual_ds = obtener_total_ingresos_por_codigo_postal_origen(viajes_didier_ds)
-
-    esperado_ds = spark_session.createDataFrame(
-        [
-            (20101, 'Origen', 76447.0),
-            (20302, 'Origen', 11165.0),
-        ],
-        ['Codigo_Postal', 'Origen_Destino', 'Cantidad_Total_Ingresos'])
-
-    esperado_ds.show()
-    actual_ds.show()
-
-    assert actual_ds.collect() == esperado_ds.collect()    
-
-def test_total_ingresos_por_codigo_postal_origen_precioKm_negativo_cero_null(spark_session):
-    viajes_didier_data = [(10000, 20101, 20105, 5.0, -600),
-                        (10000, 20302, 20105, 38.5, 290),
-                        (10001, 11504, 20101, 35.0, None),
-                        (10005, 20101, 60101, 100.8, 650),
-                        (10200, 20101, 11501, 22.3, 490),
-                        (10198, 11504, 11501, 2.0, 0)] 
-                                    
-    viajes_didier_ds = spark_session.createDataFrame(viajes_didier_data,
-                                              ['identificador', 'codigo_postal_origen', 'codigo_postal_destino', 'kilometros', 'precio_kilometro'])
-                                                
-
-    viajes_didier_ds.show()
-
-    actual_ds = obtener_total_ingresos_por_codigo_postal_origen(viajes_didier_ds)
-
-    esperado_ds = spark_session.createDataFrame(
-        [
-            (20101, 'Origen', 76447.0),
-            (20302, 'Origen', 11165.0),
-        ],
-        ['Codigo_Postal', 'Origen_Destino', 'Cantidad_Total_Ingresos'])
-
-    esperado_ds.show()
-    actual_ds.show()
-
-    assert actual_ds.collect() == esperado_ds.collect()   
-
-def test_total_ingresos_por_codigo_postal_origen_invalido(spark_session):
-    viajes_didier_data = [(10000,20101, 20105, 5.0, 600),
-                        (10005, None, 60101, 100.8, 650),
-                        (10198,None, 11501, 2.0, 0)] 
-                                    
-    viajes_didier_ds = spark_session.createDataFrame(viajes_didier_data,
-                                              ['identificador', 'codigo_postal_origen', 'codigo_postal_destino', 'kilometros', 'precio_kilometro'])
-                                                
-
-    viajes_didier_ds.show()
-
-    actual_ds = obtener_total_ingresos_por_codigo_postal_origen(viajes_didier_ds)
-    
-    esperado_ds = spark_session.createDataFrame(
-        [
-            (20101, 'Origen', 3000.0),
-        ],
-        ['Codigo_Postal', 'Origen_Destino', 'Cantidad_Total_Ingresos'])
-
-    esperado_ds.show()
-    actual_ds.show()
-
-    assert actual_ds.collect() == esperado_ds.collect()
-
-#Pruebas para la función obtener_total_ingresos_por_codigo_postal_destino
-
-def test_total_ingresos_por_codigo_postal_destino_1_viaje_por_codigo_postal(spark_session):
-    viajes_didier_data = [(10000, 20101, 20105, 5.0, 600),
-                        (10000, 20302, 20106, 38.5, 290),
-                        (10001, 11504, 20101, 20.0, 800)] 
-                                    
-    viajes_didier_ds = spark_session.createDataFrame(viajes_didier_data,
-                                              ['identificador', 'codigo_postal_origen', 'codigo_postal_destino', 'kilometros', 'precio_kilometro'])
-                                                
-
-    viajes_didier_ds.show()
-
-    actual_ds = obtener_total_ingresos_por_codigo_postal_destino(viajes_didier_ds)
-
-    esperado_ds = spark_session.createDataFrame(
-        [
-            (20101, 'Destino', 16000.0),
-            (20105, 'Destino', 3000.0),
-            (20106, 'Destino', 11165.0),
-        ],
-        ['Codigo_Postal', 'Origen_Destino', 'Cantidad_Total_Ingresos'])
-
-    esperado_ds.show()
-    actual_ds.show()
-
-    assert actual_ds.collect() == esperado_ds.collect() 
-
-def test_total_ingresos_por_codigo_postal_destino_varios_viajes_por_codigo_postal(spark_session):
-
-
-    viajes_didier_data = [(10000, 20101, 20105, 5.0, 600),
-                        (10000, 20302, 20105, 38.5, 290),
-                        (10001, 11504, 20101, 20.0, 800),
-                        (10200, 20101, 11501, 22.3, 490),
-                        (10198, 11504, 11501, 2.0, 500)] 
-                                    
-    viajes_didier_ds = spark_session.createDataFrame(viajes_didier_data,
-                                              ['identificador', 'codigo_postal_origen', 'codigo_postal_destino', 'kilometros', 'precio_kilometro'])
-                                                
-
-    viajes_didier_ds.show()
-
-    actual_ds = obtener_total_ingresos_por_codigo_postal_destino(viajes_didier_ds)
-
-    esperado_ds = spark_session.createDataFrame(
-        [
-            (11501, 'Destino', 11927.0),
-            (20101, 'Destino', 16000.0),
-            (20105, 'Destino', 14165.0),
-        ],
-        ['Codigo_Postal', 'Origen_Destino', 'Cantidad_Total_Ingresos'])
-
-    esperado_ds.show()
-    actual_ds.show()
-
-    assert actual_ds.collect() == esperado_ds.collect()   
-
-def test_total_ingresos_por_codigo_postal_destino_mismo_viaje_varias_veces(spark_session):
-    viajes_didier_data = [(10000, 20101, 20105, 5.0, 600),
-                        (10000, 20101, 20105, 5.0, 600),
-                        (10000, 20101, 20105, 5.0, 600)] 
-                                    
-    viajes_didier_ds = spark_session.createDataFrame(viajes_didier_data,
-                                              ['identificador', 'codigo_postal_origen', 'codigo_postal_destino', 'kilometros', 'precio_kilometro'])
-                                                
-
-    viajes_didier_ds.show()
-
-    actual_ds = obtener_total_ingresos_por_codigo_postal_destino(viajes_didier_ds)
-
-    esperado_ds = spark_session.createDataFrame(
-        [
-            (20105, 'Destino', 9000.0),
-        ],
-        ['Codigo_Postal', 'Origen_Destino', 'Cantidad_Total_Ingresos'])
-
-    esperado_ds.show()
-    actual_ds.show()
-
-    assert actual_ds.collect() == esperado_ds.collect()    
-
-def test_total_ingresos_por_codigo_postal_destino_kilometros_negativos_cero_null(spark_session):
-    viajes_didier_data = [(10000, 20101, 20105, -5.0, 600),
-                        (10000, 20302, 20105, 38.5, 290),
-                        (10001, 11504, 20101, None, 800),
-                        (10005, 20101, 60101, 100.8, 650),
-                        (10200, 20101, 11501, 22.3, 490),
-                        (10198, 11504, 11501, 0.0, 500)] 
-                                    
-    viajes_didier_ds = spark_session.createDataFrame(viajes_didier_data,
-                                              ['identificador', 'codigo_postal_origen', 'codigo_postal_destino', 'kilometros', 'precio_kilometro'])
-                                                
-
-    viajes_didier_ds.show()
-
-    actual_ds = obtener_total_ingresos_por_codigo_postal_destino(viajes_didier_ds)
-
-    esperado_ds = spark_session.createDataFrame(
-        [
-            (11501, 'Destino', 10927.0),
-            (20105, 'Destino', 11165.0),
-            (60101, 'Destino', 65520.0),
-        ],
-        ['Codigo_Postal', 'Origen_Destino', 'Cantidad_Total_Ingresos'])
-
-    esperado_ds.show()
-    actual_ds.show()
-
-    assert actual_ds.collect() == esperado_ds.collect()    
-
-def test_total_ingresos_por_codigo_postal_destino_precioKm_negativo_cero_null(spark_session):
-    viajes_didier_data = [(10000, 20101, 20105, 5.0, -600),
-                        (10000, 20302, 20105, 38.5, 290),
-                        (10001, 11504, 20101, 35.0, None),
-                        (10005, 20101, 60101, 100.8, 650),
-                        (10200, 20101, 11501, 22.3, 490),
-                        (10198, 11504, 11501, 2.0, 0)] 
-                                    
-    viajes_didier_ds = spark_session.createDataFrame(viajes_didier_data,
-                                              ['identificador', 'codigo_postal_origen', 'codigo_postal_destino', 'kilometros', 'precio_kilometro'])
-                                                
-
-    viajes_didier_ds.show()
-
-    actual_ds = obtener_total_ingresos_por_codigo_postal_destino(viajes_didier_ds)
-
-    esperado_ds = spark_session.createDataFrame(
-        [
-            (11501, 'Destino', 10927.0),
-            (20105, 'Destino', 11165.0),
-            (60101, 'Destino', 65520.0),
-        ],
-        ['Codigo_Postal', 'Origen_Destino', 'Cantidad_Total_Ingresos'])
-
-    esperado_ds.show()
-    actual_ds.show()
-
-    assert actual_ds.collect() == esperado_ds.collect()   
-
-def test_total_ingresos_por_codigo_postal_destino_invalido(spark_session):
-    viajes_didier_data = [(10000,20105 , 20101, 5.0, 600),
-                        (10005, 60101, None, 100.8, 650),
-                        (10198,11501 , None, 2.0, 0)] 
-                                    
-    viajes_didier_ds = spark_session.createDataFrame(viajes_didier_data,
-                                              ['identificador', 'codigo_postal_origen', 'codigo_postal_destino', 'kilometros', 'precio_kilometro'])
-                                                
-
-    viajes_didier_ds.show()
-
-    actual_ds = obtener_total_ingresos_por_codigo_postal_destino(viajes_didier_ds)
-    
-    esperado_ds = spark_session.createDataFrame(
-        [
-            (20101, 'Destino', 3000.0), 
-        ],
-        ['Codigo_Postal', 'Origen_Destino', 'Cantidad_Total_Ingresos'])
+        ['llave', 'nombre_ins', 'creacion00', 'direg15', 'cdpr15', 'cdcan15', 'cddis15', 'regplan15', 'zona15', 'mit_15', 'mih_15', 'rt_15', 'rh_15', 'aprobt_15', 'aprobh_15', 'reprot_15', 'reproh_15', 'desa_15', 'desah_15', 'desert_15', 'deserh_15', 'act_15', 'ach_15', 'nst_15', 'nsh_15', 'sit_15', 'sih_15', 'embt_15', 'embmenor_15', 'embmayor_15', 'aat15', 'aab15', 'apt15', 'apb15', 'aest15', 'aesb15', 'aaet15', 'aaeb15', 'anat15', 'anab15', 'inft15', 'infb15', 'olat15', 'olab15', 'salt15', 'salb15', 'comt15', 'comb15', 'bibt15', 'bibb15', 'gimt15', 'gimb15', 'talt_ai15', 'talb_ai15', 'otalt15', 'otalb15', 'sodt15', 'sodb15', 'indt15', 'indb15', 'lavt15', 'lavb15', 'sant15', 'sanb15', 'tvt15', 'tvb15', 'vbt15', 'vbb15', 'dvdt15', 'dvdb15', 'cetoi15', 'cetos15', 'cepei15', 'cepes15', 'cepai15', 'cepas15', 'ceadi15', 'ceads15', 'cptoi15', 'cptos15', 'cppei15', 'cppes15', 'cppai15', 'cppas15', 'cpadi15', 'cpads15', 'bib15', 'sal15', 'pla15', 'aux15', 'serv_int15', 'expto_15', 'expdef_15', 'exptem_15', 'agrve_15', 
+                        'agrvep_15', 'agrveo_15', 'agrfe_15', 'agrfep_15', 'agrfeo_15', 'agree_15', 'agreep_15', 'agreeo_15', 'agrre_15', 'agrrep_15', 'agrreo_15', 'agrde_15', 'agrdep_15', 'agrdeo_15', 'agroe_15', 'agroep_15', 'agroeo_15', 'int_15', 'inht_15', 'rit_15', 'rih_15', 'frt_15', 'frh_15', 'itt_15', 'ith_15', 'extrant_15', 'extranh_15'])
 
     esperado_ds.show()
     actual_ds.show()
 
     assert actual_ds.collect() == esperado_ds.collect()      
 
-# Pruebas para la función unir_dataframes 
-def test_unir_dataframes_total_ingresos_por_codigo_postal_origen_destino_verifica_datos(spark_session):
-    total_ingresos_por_codigo_postal_origen_data = [(11504, 'Origen', 17000.0),
-                                                (20101, 'Origen', 79447.0),
-                                                (20302, 'Origen', 11165.0)]
-
-    total_ingresos_por_codigo_postal_origen_ds = spark_session.createDataFrame(total_ingresos_por_codigo_postal_origen_data,
-                                              ['Codigo_Postal', 'Origen_Destino', 'Cantidad_Total_Ingresos'])
+# Se prueba la función aplicar_imputacion_aprobados cuando existen registros en la columna 'aprobt_15' (cantidad de aprobados total) 
+# cuyo valor es null 
+# En este caso se espera que se reemplacen los valores nulos con la siguiente fórmula: aprobt_15 = mit_15 - reprot_15 - desa_15 - desert_15
+# (cantidad de aprobados total = cantidad de matriculados total - cantidad de reprobados total - cantidad de abandono total - cantidad con exclusión intra-anual total)
+def test_aplicar_imputacion_aprobados_columna_aprobt15_null(spark_session):
+    escuelas_data = [(76, 'VIRGEN DE GUADALUPE', 1990, 1, 1, 101, 10111, 1, 1, 85, 43, 0, 0, 80, 40, 5, 4, 0, 0, 0, 0, 0, 0, 11, 6, 1, 0, 0, 0, 0, 6, 6, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 6, 6, 0, 0, 1, 1, 1, 1, 7, 7, 0, 0, 0, 23, 0, 21, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 99, 99, 1, 1, 1, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 48, 0, 0, 85, 48, 0, 0, 4, 0),
+                    (80, 'VITALIA MADRIGAL ARAYA', 1908, 1, 1, 101, 10111, 1, 1, 100, 43, 0, 0, None, 40, 5, 0, 0, 0, 0, 0, 0, 0, 11, 6, 1, 0, 0, 0, 0, 7, 7, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 6, 6, 0, 0, 1, 1, 1, 1, 7, 7, 0, 0, 0, 23, 0, 21, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 99, 99, 1, 1, 1, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 48, 0, 0, 85, 48, 0, 0, 4, 0),
+                    (82, 'ANGLO AMERICANA', 1949, 1, 1, 101, 10112, 1, 1, 500, 250, 0, 0, None, 200, 5, 0, 0, 0, 0, 0, 0, 0, 11, 6, 1, 0, 0, 0, 0, 30, 30, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 6, 6, 0, 0, 1, 1, 1, 1, 7, 7, 0, 0, 0, 23, 0, 21, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 99, 99, 1, 1, 1, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 48, 0, 0, 85, 48, 0, 0, 4, 0),
+                    ] 
+                                    
+    escuelas_data_ds = spark_session.createDataFrame(escuelas_data,
+                        ['llave', 'nombre_ins', 'creacion00', 'direg15', 'cdpr15', 'cdcan15', 'cddis15', 'regplan15', 'zona15', 'mit_15', 'mih_15', 'rt_15', 'rh_15', 'aprobt_15', 'aprobh_15', 'reprot_15', 'reproh_15', 'desa_15', 'desah_15', 'desert_15', 'deserh_15', 'act_15', 'ach_15', 'nst_15', 'nsh_15', 'sit_15', 'sih_15', 'embt_15', 'embmenor_15', 'embmayor_15', 'aat15', 'aab15', 'apt15', 'apb15', 'aest15', 'aesb15', 'aaet15', 'aaeb15', 'anat15', 'anab15', 'inft15', 'infb15', 'olat15', 'olab15', 'salt15', 'salb15', 'comt15', 'comb15', 'bibt15', 'bibb15', 'gimt15', 'gimb15', 'talt_ai15', 'talb_ai15', 'otalt15', 'otalb15', 'sodt15', 'sodb15', 'indt15', 'indb15', 'lavt15', 'lavb15', 'sant15', 'sanb15', 'tvt15', 'tvb15', 'vbt15', 'vbb15', 'dvdt15', 'dvdb15', 'cetoi15', 'cetos15', 'cepei15', 'cepes15', 'cepai15', 'cepas15', 'ceadi15', 'ceads15', 'cptoi15', 'cptos15', 'cppei15', 'cppes15', 'cppai15', 'cppas15', 'cpadi15', 'cpads15', 'bib15', 'sal15', 'pla15', 'aux15', 'serv_int15', 'expto_15', 'expdef_15', 'exptem_15', 'agrve_15', 
+                        'agrvep_15', 'agrveo_15', 'agrfe_15', 'agrfep_15', 'agrfeo_15', 'agree_15', 'agreep_15', 'agreeo_15', 'agrre_15', 'agrrep_15', 'agrreo_15', 'agrde_15', 'agrdep_15', 'agrdeo_15', 'agroe_15', 'agroep_15', 'agroeo_15', 'int_15', 'inht_15', 'rit_15', 'rih_15', 'frt_15', 'frh_15', 'itt_15', 'ith_15', 'extrant_15', 'extranh_15'])
                                                 
-    total_ingresos_por_codigo_postal_destino_data = [ (11501, 'Destino', 11927.0),
-                                                    (20101, 'Destino', 30165.0)]
 
-    total_ingresos_por_codigo_postal_destino_ds = spark_session.createDataFrame(total_ingresos_por_codigo_postal_destino_data,
-                                              ['Codigo_Postal', 'Origen_Destino', 'Cantidad_Total_Ingresos'])
-                                                
-    
-    actual_ds = unir_dataframes(total_ingresos_por_codigo_postal_origen_ds, total_ingresos_por_codigo_postal_destino_ds)
+    escuelas_data_ds.show()
+
+    actual_ds = aplicar_imputacion_aprobados(escuelas_data_ds)
 
     esperado_ds = spark_session.createDataFrame(
         [
-            (11504, 'Origen', 17000.0),
-            (20101, 'Origen', 79447.0),
-            (20302, 'Origen', 11165.0),
-            (11501, 'Destino', 11927.0),
-            (20101, 'Destino', 30165.0),
+                    (76, 'VIRGEN DE GUADALUPE', 1990, 1, 1, 101, 10111, 1, 1, 85, 43, 0, 0, 80, 40, 5, 4, 0, 0, 0, 0, 0, 0, 11, 6, 1, 0, 0, 0, 0, 6, 6, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 6, 6, 0, 0, 1, 1, 1, 1, 7, 7, 0, 0, 0, 23, 0, 21, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 99, 99, 1, 1, 1, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 48, 0, 0, 85, 48, 0, 0, 4, 0),
+                    (80, 'VITALIA MADRIGAL ARAYA', 1908, 1, 1, 101, 10111, 1, 1, 100, 43, 0, 0, 95, 40, 5, 0, 0, 0, 0, 0, 0, 0, 11, 6, 1, 0, 0, 0, 0, 7, 7, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 6, 6, 0, 0, 1, 1, 1, 1, 7, 7, 0, 0, 0, 23, 0, 21, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 99, 99, 1, 1, 1, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 48, 0, 0, 85, 48, 0, 0, 4, 0),
+                    (82, 'ANGLO AMERICANA', 1949, 1, 1, 101, 10112, 1, 1, 500, 250, 0, 0, 495, 200, 5, 0, 0, 0, 0, 0, 0, 0, 11, 6, 1, 0, 0, 0, 0, 30, 30, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 6, 6, 0, 0, 1, 1, 1, 1, 7, 7, 0, 0, 0, 23, 0, 21, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 99, 99, 1, 1, 1, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 48, 0, 0, 85, 48, 0, 0, 4, 0),
         ],
-        ['Codigo_Postal', 'Origen_Destino', 'Cantidad_Total_Ingresos'])
+        ['llave', 'nombre_ins', 'creacion00', 'direg15', 'cdpr15', 'cdcan15', 'cddis15', 'regplan15', 'zona15', 'mit_15', 'mih_15', 'rt_15', 'rh_15', 'aprobt_15', 'aprobh_15', 'reprot_15', 'reproh_15', 'desa_15', 'desah_15', 'desert_15', 'deserh_15', 'act_15', 'ach_15', 'nst_15', 'nsh_15', 'sit_15', 'sih_15', 'embt_15', 'embmenor_15', 'embmayor_15', 'aat15', 'aab15', 'apt15', 'apb15', 'aest15', 'aesb15', 'aaet15', 'aaeb15', 'anat15', 'anab15', 'inft15', 'infb15', 'olat15', 'olab15', 'salt15', 'salb15', 'comt15', 'comb15', 'bibt15', 'bibb15', 'gimt15', 'gimb15', 'talt_ai15', 'talb_ai15', 'otalt15', 'otalb15', 'sodt15', 'sodb15', 'indt15', 'indb15', 'lavt15', 'lavb15', 'sant15', 'sanb15', 'tvt15', 'tvb15', 'vbt15', 'vbb15', 'dvdt15', 'dvdb15', 'cetoi15', 'cetos15', 'cepei15', 'cepes15', 'cepai15', 'cepas15', 'ceadi15', 'ceads15', 'cptoi15', 'cptos15', 'cppei15', 'cppes15', 'cppai15', 'cppas15', 'cpadi15', 'cpads15', 'bib15', 'sal15', 'pla15', 'aux15', 'serv_int15', 'expto_15', 'expdef_15', 'exptem_15', 'agrve_15', 
+                        'agrvep_15', 'agrveo_15', 'agrfe_15', 'agrfep_15', 'agrfeo_15', 'agree_15', 'agreep_15', 'agreeo_15', 'agrre_15', 'agrrep_15', 'agrreo_15', 'agrde_15', 'agrdep_15', 'agrdeo_15', 'agroe_15', 'agroep_15', 'agroeo_15', 'int_15', 'inht_15', 'rit_15', 'rih_15', 'frt_15', 'frh_15', 'itt_15', 'ith_15', 'extrant_15', 'extranh_15'])
 
     esperado_ds.show()
     actual_ds.show()
 
     assert actual_ds.collect() == esperado_ds.collect()  
 
-def test_unir_dataframes_total_ingresos_por_codigo_postal_origen_destino_verifica_cantidad_registros(spark_session):
-    total_ingresos_por_codigo_postal_origen_data = [(11504, 'Origen', 17000.0),
-                                                (20101, 'Origen', 79447.0),
-                                                (20302, 'Origen', 11165.0)]
-
-    total_ingresos_por_codigo_postal_origen_ds = spark_session.createDataFrame(total_ingresos_por_codigo_postal_origen_data,
-                                              ['Codigo_Postal', 'Origen_Destino', 'Cantidad_Total_Ingresos'])
-                                                
-    total_ingresos_por_codigo_postal_destino_data = [ (11501, 'Destino', 11927.0),
-                                                    (20101, 'Destino', 30165.0)]
-
-    total_ingresos_por_codigo_postal_destino_ds = spark_session.createDataFrame(total_ingresos_por_codigo_postal_destino_data,
-                                              ['Codigo_Postal', 'Origen_Destino', 'Cantidad_Total_Ingresos'])
-                                                
-    
-    actual_ds = unir_dataframes(total_ingresos_por_codigo_postal_origen_ds, total_ingresos_por_codigo_postal_destino_ds)
-    actual = actual_ds.count()
-
-    esperado = total_ingresos_por_codigo_postal_origen_ds.count() + total_ingresos_por_codigo_postal_destino_ds.count()
-
-    assert actual == esperado  
-
-#Pruebas para la función obtener_metrica_persona_con_mas_kilometros
-
-def test_metrica_persona_con_mas_kilometros_1_viaje_por_persona(spark_session):
-    viajes_didier_data = [(10000, 20101, 20105, 5.0, 600),
-                        (10820, 20302, 20105, 38.5, 290),
-                        (10011, 11504, 20101, 20.0, 800)] 
+# Se prueba la función aplicar_imputacion_aprobados cuando existen registros en la columna 'aprobh_15' (cantidad de aprobados hombres)
+# cuyo valor es null  
+# En este caso se espera que se reemplacen los valores nulos con la siguiente fórmula: aprobh_15 = mih_15 - reproh_15 - desah_15 - deserh_15
+# (cantidad de aprobados hombres = cantidad de matriculados hombres - cantidad de reprobados hombres - cantidad de abandono hombres - cantidad con exclusión intra-anual hombres)
+def test_aplicar_imputacion_aprobados_columna_aprobh15_null(spark_session):
+    escuelas_data = [(76, 'VIRGEN DE GUADALUPE', 1990, 1, 1, 101, 10111, 1, 1, 85, 43, 0, 0, 80, 40, 5, 4, 0, 0, 0, 0, 0, 0, 11, 6, 1, 0, 0, 0, 0, 6, 6, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 6, 6, 0, 0, 1, 1, 1, 1, 7, 7, 0, 0, 0, 23, 0, 21, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 99, 99, 1, 1, 1, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 48, 0, 0, 85, 48, 0, 0, 4, 0),
+                    (80, 'VITALIA MADRIGAL ARAYA', 1908, 1, 1, 101, 10111, 1, 1, 100, 43, 0, 0, 95, None, 5, 0, 0, 0, 0, 0, 0, 0, 11, 6, 1, 0, 0, 0, 0, 7, 7, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 6, 6, 0, 0, 1, 1, 1, 1, 7, 7, 0, 0, 0, 23, 0, 21, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 99, 99, 1, 1, 1, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 48, 0, 0, 85, 48, 0, 0, 4, 0),
+                    (82, 'ANGLO AMERICANA', 1949, 1, 1, 101, 10112, 1, 1, 500, 250, 0, 0, 495, None, 5, 0, 0, 0, 0, 0, 0, 0, 11, 6, 1, 0, 0, 0, 0, 30, 30, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 6, 6, 0, 0, 1, 1, 1, 1, 7, 7, 0, 0, 0, 23, 0, 21, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 99, 99, 1, 1, 1, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 48, 0, 0, 85, 48, 0, 0, 4, 0),
+                    ] 
                                     
-    viajes_didier_ds = spark_session.createDataFrame(viajes_didier_data,
-                                              ['identificador', 'codigo_postal_origen', 'codigo_postal_destino', 'kilometros', 'precio_kilometro'])
+    escuelas_data_ds = spark_session.createDataFrame(escuelas_data,
+                        ['llave', 'nombre_ins', 'creacion00', 'direg15', 'cdpr15', 'cdcan15', 'cddis15', 'regplan15', 'zona15', 'mit_15', 'mih_15', 'rt_15', 'rh_15', 'aprobt_15', 'aprobh_15', 'reprot_15', 'reproh_15', 'desa_15', 'desah_15', 'desert_15', 'deserh_15', 'act_15', 'ach_15', 'nst_15', 'nsh_15', 'sit_15', 'sih_15', 'embt_15', 'embmenor_15', 'embmayor_15', 'aat15', 'aab15', 'apt15', 'apb15', 'aest15', 'aesb15', 'aaet15', 'aaeb15', 'anat15', 'anab15', 'inft15', 'infb15', 'olat15', 'olab15', 'salt15', 'salb15', 'comt15', 'comb15', 'bibt15', 'bibb15', 'gimt15', 'gimb15', 'talt_ai15', 'talb_ai15', 'otalt15', 'otalb15', 'sodt15', 'sodb15', 'indt15', 'indb15', 'lavt15', 'lavb15', 'sant15', 'sanb15', 'tvt15', 'tvb15', 'vbt15', 'vbb15', 'dvdt15', 'dvdb15', 'cetoi15', 'cetos15', 'cepei15', 'cepes15', 'cepai15', 'cepas15', 'ceadi15', 'ceads15', 'cptoi15', 'cptos15', 'cppei15', 'cppes15', 'cppai15', 'cppas15', 'cpadi15', 'cpads15', 'bib15', 'sal15', 'pla15', 'aux15', 'serv_int15', 'expto_15', 'expdef_15', 'exptem_15', 'agrve_15', 
+                        'agrvep_15', 'agrveo_15', 'agrfe_15', 'agrfep_15', 'agrfeo_15', 'agree_15', 'agreep_15', 'agreeo_15', 'agrre_15', 'agrrep_15', 'agrreo_15', 'agrde_15', 'agrdep_15', 'agrdeo_15', 'agroe_15', 'agroep_15', 'agroeo_15', 'int_15', 'inht_15', 'rit_15', 'rih_15', 'frt_15', 'frh_15', 'itt_15', 'ith_15', 'extrant_15', 'extranh_15'])
                                                 
 
-    viajes_didier_ds.show()
+    escuelas_data_ds.show()
 
-    actual_ds = obtener_metrica_persona_con_mas_kilometros(viajes_didier_ds)
+    actual_ds = aplicar_imputacion_aprobados(escuelas_data_ds)
 
     esperado_ds = spark_session.createDataFrame(
         [
-            ('persona_con_mas_kilometros', 10820),
+                    (76, 'VIRGEN DE GUADALUPE', 1990, 1, 1, 101, 10111, 1, 1, 85, 43, 0, 0, 80, 40, 5, 4, 0, 0, 0, 0, 0, 0, 11, 6, 1, 0, 0, 0, 0, 6, 6, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 6, 6, 0, 0, 1, 1, 1, 1, 7, 7, 0, 0, 0, 23, 0, 21, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 99, 99, 1, 1, 1, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 48, 0, 0, 85, 48, 0, 0, 4, 0),
+                    (80, 'VITALIA MADRIGAL ARAYA', 1908, 1, 1, 101, 10111, 1, 1, 100, 43, 0, 0, 95, 43, 5, 0, 0, 0, 0, 0, 0, 0, 11, 6, 1, 0, 0, 0, 0, 7, 7, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 6, 6, 0, 0, 1, 1, 1, 1, 7, 7, 0, 0, 0, 23, 0, 21, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 99, 99, 1, 1, 1, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 48, 0, 0, 85, 48, 0, 0, 4, 0),
+                    (82, 'ANGLO AMERICANA', 1949, 1, 1, 101, 10112, 1, 1, 500, 250, 0, 0, 495, 250, 5, 0, 0, 0, 0, 0, 0, 0, 11, 6, 1, 0, 0, 0, 0, 30, 30, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 6, 6, 0, 0, 1, 1, 1, 1, 7, 7, 0, 0, 0, 23, 0, 21, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 99, 99, 1, 1, 1, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 48, 0, 0, 85, 48, 0, 0, 4, 0),
         ],
-        ['Tipo_de_Metrica', 'Valor'])
-
-    esperado_ds.show()
-    actual_ds.show()
-
-    assert actual_ds.collect() == esperado_ds.collect()
-
-def test_metrica_persona_con_mas_kilometros_varios_viajes_por_persona(spark_session):
-    viajes_didier_data = [(10000, 20101, 20105, 5.0, 600),
-                        (10000, 20302, 20105, 38.5, 290),
-                        (10000, 11504, 20101, 20.0, 800),
-                        (10001, 20101, 60101, 100.8, 650),
-                        (10001, 20101, 11501, 22.3, 490),
-                        (10198, 11504, 11501, 2.0, 500)] 
-                                    
-    viajes_didier_ds = spark_session.createDataFrame(viajes_didier_data,
-                                              ['identificador', 'codigo_postal_origen', 'codigo_postal_destino', 'kilometros', 'precio_kilometro'])
-                                                
-
-    viajes_didier_ds.show()
-
-    actual_ds = obtener_metrica_persona_con_mas_kilometros(viajes_didier_ds)
-
-    esperado_ds = spark_session.createDataFrame(
-        [
-            ('persona_con_mas_kilometros', 10001),
-        ],
-        ['Tipo_de_Metrica', 'Valor'])
-
-    esperado_ds.show()
-    actual_ds.show()
-
-    assert actual_ds.collect() == esperado_ds.collect()   
-
-def test_metrica_persona_con_mas_kilometros_personas_empatadas(spark_session):
-    viajes_didier_data = [(10198, 20101, 60101, 100.8, 650),
-                        (10198, 20102, 11501, 22.3, 490),
-                        (10001, 20101, 60101, 100.8, 650),
-                        (10001, 20102, 11501, 22.3, 490)] 
-                                    
-    viajes_didier_ds = spark_session.createDataFrame(viajes_didier_data,
-                                              ['identificador', 'codigo_postal_origen', 'codigo_postal_destino', 'kilometros', 'precio_kilometro'])
-                                                
-
-    viajes_didier_ds.show()
-
-    actual_ds = obtener_metrica_persona_con_mas_kilometros(viajes_didier_ds)
-
-    esperado_ds = spark_session.createDataFrame(
-        [
-            ('persona_con_mas_kilometros', 10001),
-        ],
-        ['Tipo_de_Metrica', 'Valor'])
-
-    esperado_ds.show()
-    actual_ds.show()
-
-    assert actual_ds.collect() == esperado_ds.collect()     
-
-#Pruebas para la función obtener_metrica_persona_con_mas_ingresos
-
-def test_metrica_persona_con_mas_ingresos_1_viaje_por_persona(spark_session):
-    viajes_didier_data = [(10000, 20101, 20105, 5.0, 600),
-                        (10820, 20302, 20105, 38.5, 290),
-                        (10011, 11504, 20101, 20.0, 800)] 
-                                    
-    viajes_didier_ds = spark_session.createDataFrame(viajes_didier_data,
-                                              ['identificador', 'codigo_postal_origen', 'codigo_postal_destino', 'kilometros', 'precio_kilometro'])
-                                                
-
-    viajes_didier_ds.show()
-
-    actual_ds = obtener_metrica_persona_con_mas_ingresos(viajes_didier_ds)
-
-    esperado_ds = spark_session.createDataFrame(
-        [
-            ('persona_con_mas_ingresos', 10011),
-        ],
-        ['Tipo_de_Metrica', 'Valor'])
-
-    esperado_ds.show()
-    actual_ds.show()
-
-    assert actual_ds.collect() == esperado_ds.collect()
-
-def test_metrica_persona_con_mas_ingresos_varios_viajes_por_persona(spark_session):
-    viajes_didier_data = [(10000, 20101, 20105, 5.0, 600),
-                        (10000, 20302, 20105, 38.5, 290),
-                        (10000, 11504, 20101, 20.0, 800),
-                        (10001, 20101, 60101, 100.8, 650),
-                        (10001, 20101, 11501, 22.3, 490),
-                        (10198, 11504, 11501, 2.0, 500)] 
-                                    
-    viajes_didier_ds = spark_session.createDataFrame(viajes_didier_data,
-                                              ['identificador', 'codigo_postal_origen', 'codigo_postal_destino', 'kilometros', 'precio_kilometro'])
-                                                
-
-    viajes_didier_ds.show()
-
-    actual_ds = obtener_metrica_persona_con_mas_ingresos(viajes_didier_ds)
-
-    esperado_ds = spark_session.createDataFrame(
-        [
-            ('persona_con_mas_ingresos', 10001),
-        ],
-        ['Tipo_de_Metrica', 'Valor'])
-
-    esperado_ds.show()
-    actual_ds.show()
-
-    assert actual_ds.collect() == esperado_ds.collect()   
-
-def test_metrica_persona_con_mas_ingresos_personas_empatadas(spark_session):
-    viajes_didier_data = [(10198, 20101, 60101, 100.8, 650),
-                        (10198, 20102, 11501, 22.3, 490),
-                        (10001, 20101, 60101, 100.8, 650),
-                        (10001, 20102, 11501, 22.3, 490)] 
-                                    
-    viajes_didier_ds = spark_session.createDataFrame(viajes_didier_data,
-                                              ['identificador', 'codigo_postal_origen', 'codigo_postal_destino', 'kilometros', 'precio_kilometro'])
-                                                
-
-    viajes_didier_ds.show()
-
-    actual_ds = obtener_metrica_persona_con_mas_ingresos(viajes_didier_ds)
-
-    esperado_ds = spark_session.createDataFrame(
-        [
-            ('persona_con_mas_ingresos', 10001),
-        ],
-        ['Tipo_de_Metrica', 'Valor'])
-
-    esperado_ds.show()
-    actual_ds.show()
-
-    assert actual_ds.collect() == esperado_ds.collect()     
-
-       
-#Pruebas para la función obtener_metrica_percentil
-
-def test_metrica_percentil_25(spark_session):
-    viajes_didier_data = [(10000, 20101, 20105, 5.0, 600),
-                        (10001, 20302, 20105, 38.5, 290),
-                        (10002, 11504, 60101, 100.8, 800),
-                        (10003, 20101, 60101, 90.8, 650)                      
-                        ] 
-                                    
-    viajes_didier_ds = spark_session.createDataFrame(viajes_didier_data,
-                                              ['identificador', 'codigo_postal_origen', 'codigo_postal_destino', 'kilometros', 'precio_kilometro'])
-                                                
-
-    viajes_didier_ds.show()
-
-    actual_ds = calcular_metrica_percentil(viajes_didier_ds,25)
-
-    esperado_ds = spark_session.createDataFrame(
-        [
-            ('percentil_25', 3000.0),
-        ],
-        ['Tipo_de_Metrica', 'Valor'])
-
-    esperado_ds.show()
-    actual_ds.show()
-
-    assert actual_ds.collect() == esperado_ds.collect()
-
-def test_metrica_percentil_25_con_redondeo(spark_session):
-    viajes_didier_data = [(10000, 20101, 20105, 5.0, 600),
-                        (10001, 20302, 20105, 38.5, 290),
-                        (10002, 11504, 60101, 100.8, 800),
-                        (10003, 20101, 60101, 90.8, 650),
-                        (10004, 20101, 11501, 22.3, 490),
-                        (10005, 11504, 11501, 2.0, 500),
-                        (10006, 20102, 11502, 22.3, 490),
-                        (10007, 20103, 11503, 23.4, 500),
-                        (10008, 20104, 11504, 24.5, 510),
-                        (10009, 20105, 11505, 25.6, 520)
-                        ] 
-                                    
-    viajes_didier_ds = spark_session.createDataFrame(viajes_didier_data,
-                                              ['identificador', 'codigo_postal_origen', 'codigo_postal_destino', 'kilometros', 'precio_kilometro'])
-                                                
-
-    viajes_didier_ds.show()
-
-    actual_ds = calcular_metrica_percentil(viajes_didier_ds,25)
-
-    esperado_ds = spark_session.createDataFrame(
-        [
-            ('percentil_25', 10927.0),
-        ],
-        ['Tipo_de_Metrica', 'Valor'])
-
-    esperado_ds.show()
-    actual_ds.show()
-
-    assert actual_ds.collect() == esperado_ds.collect()
-
-def test_metrica_percentil_50(spark_session):
-    viajes_didier_data = [(10000, 20101, 20105, 5.0, 600),
-                        (10001, 20302, 20105, 38.5, 290),
-                        (10002, 11504, 60101, 100.8, 800),
-                        (10003, 20101, 60101, 90.8, 650),
-                        (10004, 20101, 11501, 22.3, 490),
-                        (10005, 11504, 11501, 2.0, 500),
-                        (10006, 20102, 11502, 22.3, 490),
-                        (10007, 20103, 11503, 23.4, 500),
-                        (10008, 20104, 11504, 24.5, 510),
-                        (10009, 20105, 11505, 25.6, 520)
-                        ] 
-                                    
-    viajes_didier_ds = spark_session.createDataFrame(viajes_didier_data,
-                                              ['identificador', 'codigo_postal_origen', 'codigo_postal_destino', 'kilometros', 'precio_kilometro'])
-                                                
-
-    viajes_didier_ds.show()
-
-    actual_ds = calcular_metrica_percentil(viajes_didier_ds,50)
-
-    esperado_ds = spark_session.createDataFrame(
-        [
-            ('percentil_50', 11165.0),
-        ],
-        ['Tipo_de_Metrica', 'Valor'])
-
-    esperado_ds.show()
-    actual_ds.show()
-
-    assert actual_ds.collect() == esperado_ds.collect()
-
-def test_metrica_percentil_50_con_redondeo(spark_session):
-    viajes_didier_data = [(10000, 20101, 20105, 5.0, 600),
-                        (10000, 20101, 20105, 5.0, 600),
-                        (10001, 20302, 20105, 38.5, 290),
-                        (10002, 11504, 60101, 100.8, 800),
-                        (10002, 11504, 10101, 2.3, 495),
-                        (10003, 20101, 60101, 90.8, 650),
-                        (10004, 20101, 11501, 22.3, 490),
-                        (10005, 11504, 11501, 2.0, 500),
-                        (10006, 20102, 11502, 22.3, 490),
-                        (10007, 20103, 11503, 23.4, 500),
-                        (10008, 20104, 11504, 24.5, 510),
-                        (10009, 20105, 11505, 25.6, 520),
-                        (10010, 20102, 11507, 37.6, 350)
-                        ] 
-                                    
-    viajes_didier_ds = spark_session.createDataFrame(viajes_didier_data,
-                                              ['identificador', 'codigo_postal_origen', 'codigo_postal_destino', 'kilometros', 'precio_kilometro'])
-                                                
-
-    viajes_didier_ds.show()
-
-    actual_ds = calcular_metrica_percentil(viajes_didier_ds,50)
-
-    esperado_ds = spark_session.createDataFrame(
-        [
-            ('percentil_50', 11700.0),
-        ],
-        ['Tipo_de_Metrica', 'Valor'])
+        ['llave', 'nombre_ins', 'creacion00', 'direg15', 'cdpr15', 'cdcan15', 'cddis15', 'regplan15', 'zona15', 'mit_15', 'mih_15', 'rt_15', 'rh_15', 'aprobt_15', 'aprobh_15', 'reprot_15', 'reproh_15', 'desa_15', 'desah_15', 'desert_15', 'deserh_15', 'act_15', 'ach_15', 'nst_15', 'nsh_15', 'sit_15', 'sih_15', 'embt_15', 'embmenor_15', 'embmayor_15', 'aat15', 'aab15', 'apt15', 'apb15', 'aest15', 'aesb15', 'aaet15', 'aaeb15', 'anat15', 'anab15', 'inft15', 'infb15', 'olat15', 'olab15', 'salt15', 'salb15', 'comt15', 'comb15', 'bibt15', 'bibb15', 'gimt15', 'gimb15', 'talt_ai15', 'talb_ai15', 'otalt15', 'otalb15', 'sodt15', 'sodb15', 'indt15', 'indb15', 'lavt15', 'lavb15', 'sant15', 'sanb15', 'tvt15', 'tvb15', 'vbt15', 'vbb15', 'dvdt15', 'dvdb15', 'cetoi15', 'cetos15', 'cepei15', 'cepes15', 'cepai15', 'cepas15', 'ceadi15', 'ceads15', 'cptoi15', 'cptos15', 'cppei15', 'cppes15', 'cppai15', 'cppas15', 'cpadi15', 'cpads15', 'bib15', 'sal15', 'pla15', 'aux15', 'serv_int15', 'expto_15', 'expdef_15', 'exptem_15', 'agrve_15', 
+                        'agrvep_15', 'agrveo_15', 'agrfe_15', 'agrfep_15', 'agrfeo_15', 'agree_15', 'agreep_15', 'agreeo_15', 'agrre_15', 'agrrep_15', 'agrreo_15', 'agrde_15', 'agrdep_15', 'agrdeo_15', 'agroe_15', 'agroep_15', 'agroeo_15', 'int_15', 'inht_15', 'rit_15', 'rih_15', 'frt_15', 'frh_15', 'itt_15', 'ith_15', 'extrant_15', 'extranh_15'])
 
     esperado_ds.show()
     actual_ds.show()
 
     assert actual_ds.collect() == esperado_ds.collect()    
 
-def test_metrica_percentil_75(spark_session):
-    viajes_didier_data = [(10000, 20101, 20105, 5.0, 600),
-                        (10000, 20101, 20105, 5.0, 600),
-                        (10001, 20302, 20105, 38.5, 290),
-                        (10002, 11504, 60101, 100.8, 800),
-                        (10002, 11504, 10101, 2.3, 495),
-                        (10003, 20101, 60101, 90.8, 650),
-                        (10004, 20101, 11501, 22.3, 490),
-                        (10005, 11504, 11501, 2.0, 500),
-                        (10006, 20102, 11502, 22.3, 490),
-                        (10007, 20103, 11503, 23.4, 500),
-                        (10008, 20104, 11504, 24.5, 510),
-                        (10009, 20105, 11505, 25.6, 520),
-                        (10010, 20105, 60105, 110.6, 800),
-                        (10011, 20105, 60105, 110.6, 800)
-                        ] 
+# Se prueba la función aplicar_imputacion_aprobados cuando los campos de las columnas aprobt_15 y aprobh_15 están correctos, es decir, ninguno tiene valores mayores a los matriculados o null, 
+# en este caso se espera que la función no aplique ningún cambio al dataframe y devuelva los mismos datos
+def test_aplicar_imputacion_aprobados_columnas_aprobt15_y_aprobh15_correctas(spark_session):
+    escuelas_data = [(76, 'VIRGEN DE GUADALUPE', 1990, 1, 1, 101, 10111, 1, 1, 85, 43, 0, 0, 80, 40, 5, 4, 0, 0, 0, 0, 0, 0, 11, 6, 1, 0, 0, 0, 0, 6, 6, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 6, 6, 0, 0, 1, 1, 1, 1, 7, 7, 0, 0, 0, 23, 0, 21, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 99, 99, 1, 1, 1, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 48, 0, 0, 85, 48, 0, 0, 4, 0),
+                    (80, 'VITALIA MADRIGAL ARAYA', 1908, 1, 1, 101, 10111, 1, 1, 100, 43, 0, 0, 95, 43, 5, 0, 0, 0, 0, 0, 0, 0, 11, 6, 1, 0, 0, 0, 0, 7, 7, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 6, 6, 0, 0, 1, 1, 1, 1, 7, 7, 0, 0, 0, 23, 0, 21, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 99, 99, 1, 1, 1, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 48, 0, 0, 85, 48, 0, 0, 4, 0),
+                    (82, 'ANGLO AMERICANA', 1949, 1, 1, 101, 10112, 1, 1, 500, 250, 0, 0, 495, 250, 5, 0, 0, 0, 0, 0, 0, 0, 11, 6, 1, 0, 0, 0, 0, 30, 30, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 6, 6, 0, 0, 1, 1, 1, 1, 7, 7, 0, 0, 0, 23, 0, 21, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 99, 99, 1, 1, 1, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 48, 0, 0, 85, 48, 0, 0, 4, 0),
+                    ] 
                                     
-    viajes_didier_ds = spark_session.createDataFrame(viajes_didier_data,
-                                              ['identificador', 'codigo_postal_origen', 'codigo_postal_destino', 'kilometros', 'precio_kilometro'])
+    escuelas_data_ds = spark_session.createDataFrame(escuelas_data,
+                        ['llave', 'nombre_ins', 'creacion00', 'direg15', 'cdpr15', 'cdcan15', 'cddis15', 'regplan15', 'zona15', 'mit_15', 'mih_15', 'rt_15', 'rh_15', 'aprobt_15', 'aprobh_15', 'reprot_15', 'reproh_15', 'desa_15', 'desah_15', 'desert_15', 'deserh_15', 'act_15', 'ach_15', 'nst_15', 'nsh_15', 'sit_15', 'sih_15', 'embt_15', 'embmenor_15', 'embmayor_15', 'aat15', 'aab15', 'apt15', 'apb15', 'aest15', 'aesb15', 'aaet15', 'aaeb15', 'anat15', 'anab15', 'inft15', 'infb15', 'olat15', 'olab15', 'salt15', 'salb15', 'comt15', 'comb15', 'bibt15', 'bibb15', 'gimt15', 'gimb15', 'talt_ai15', 'talb_ai15', 'otalt15', 'otalb15', 'sodt15', 'sodb15', 'indt15', 'indb15', 'lavt15', 'lavb15', 'sant15', 'sanb15', 'tvt15', 'tvb15', 'vbt15', 'vbb15', 'dvdt15', 'dvdb15', 'cetoi15', 'cetos15', 'cepei15', 'cepes15', 'cepai15', 'cepas15', 'ceadi15', 'ceads15', 'cptoi15', 'cptos15', 'cppei15', 'cppes15', 'cppai15', 'cppas15', 'cpadi15', 'cpads15', 'bib15', 'sal15', 'pla15', 'aux15', 'serv_int15', 'expto_15', 'expdef_15', 'exptem_15', 'agrve_15', 
+                        'agrvep_15', 'agrveo_15', 'agrfe_15', 'agrfep_15', 'agrfeo_15', 'agree_15', 'agreep_15', 'agreeo_15', 'agrre_15', 'agrrep_15', 'agrreo_15', 'agrde_15', 'agrdep_15', 'agrdeo_15', 'agroe_15', 'agroep_15', 'agroeo_15', 'int_15', 'inht_15', 'rit_15', 'rih_15', 'frt_15', 'frh_15', 'itt_15', 'ith_15', 'extrant_15', 'extranh_15'])
                                                 
 
-    viajes_didier_ds.show()
+    escuelas_data_ds.show()
 
-    actual_ds = calcular_metrica_percentil(viajes_didier_ds,75)
+    actual_ds = aplicar_imputacion_aprobados(escuelas_data_ds)
 
     esperado_ds = spark_session.createDataFrame(
         [
-            ('percentil_75', 59020.0),
-        ],
-        ['Tipo_de_Metrica', 'Valor'])
+            (76, 'VIRGEN DE GUADALUPE', 1990, 1, 1, 101, 10111, 1, 1, 85, 43, 0, 0, 80, 40, 5, 4, 0, 0, 0, 0, 0, 0, 11, 6, 1, 0, 0, 0, 0, 6, 6, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 6, 6, 0, 0, 1, 1, 1, 1, 7, 7, 0, 0, 0, 23, 0, 21, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 99, 99, 1, 1, 1, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 48, 0, 0, 85, 48, 0, 0, 4, 0),
+            (80, 'VITALIA MADRIGAL ARAYA', 1908, 1, 1, 101, 10111, 1, 1, 100, 43, 0, 0, 95, 43, 5, 0, 0, 0, 0, 0, 0, 0, 11, 6, 1, 0, 0, 0, 0, 7, 7, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 6, 6, 0, 0, 1, 1, 1, 1, 7, 7, 0, 0, 0, 23, 0, 21, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 99, 99, 1, 1, 1, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 48, 0, 0, 85, 48, 0, 0, 4, 0),
+            (82, 'ANGLO AMERICANA', 1949, 1, 1, 101, 10112, 1, 1, 500, 250, 0, 0, 495, 250, 5, 0, 0, 0, 0, 0, 0, 0, 11, 6, 1, 0, 0, 0, 0, 30, 30, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 6, 6, 0, 0, 1, 1, 1, 1, 7, 7, 0, 0, 0, 23, 0, 21, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 99, 99, 1, 1, 1, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 48, 0, 0, 85, 48, 0, 0, 4, 0),
+],
+        ['llave', 'nombre_ins', 'creacion00', 'direg15', 'cdpr15', 'cdcan15', 'cddis15', 'regplan15', 'zona15', 'mit_15', 'mih_15', 'rt_15', 'rh_15', 'aprobt_15', 'aprobh_15', 'reprot_15', 'reproh_15', 'desa_15', 'desah_15', 'desert_15', 'deserh_15', 'act_15', 'ach_15', 'nst_15', 'nsh_15', 'sit_15', 'sih_15', 'embt_15', 'embmenor_15', 'embmayor_15', 'aat15', 'aab15', 'apt15', 'apb15', 'aest15', 'aesb15', 'aaet15', 'aaeb15', 'anat15', 'anab15', 'inft15', 'infb15', 'olat15', 'olab15', 'salt15', 'salb15', 'comt15', 'comb15', 'bibt15', 'bibb15', 'gimt15', 'gimb15', 'talt_ai15', 'talb_ai15', 'otalt15', 'otalb15', 'sodt15', 'sodb15', 'indt15', 'indb15', 'lavt15', 'lavb15', 'sant15', 'sanb15', 'tvt15', 'tvb15', 'vbt15', 'vbb15', 'dvdt15', 'dvdb15', 'cetoi15', 'cetos15', 'cepei15', 'cepes15', 'cepai15', 'cepas15', 'ceadi15', 'ceads15', 'cptoi15', 'cptos15', 'cppei15', 'cppes15', 'cppai15', 'cppas15', 'cpadi15', 'cpads15', 'bib15', 'sal15', 'pla15', 'aux15', 'serv_int15', 'expto_15', 'expdef_15', 'exptem_15', 'agrve_15', 
+                        'agrvep_15', 'agrveo_15', 'agrfe_15', 'agrfep_15', 'agrfeo_15', 'agree_15', 'agreep_15', 'agreeo_15', 'agrre_15', 'agrrep_15', 'agrreo_15', 'agrde_15', 'agrdep_15', 'agrdeo_15', 'agroe_15', 'agroep_15', 'agroeo_15', 'int_15', 'inht_15', 'rit_15', 'rih_15', 'frt_15', 'frh_15', 'itt_15', 'ith_15', 'extrant_15', 'extranh_15'])
 
     esperado_ds.show()
     actual_ds.show()
 
     assert actual_ds.collect() == esperado_ds.collect() 
 
-def test_metrica_percentil_75_con_redondeo(spark_session):
-    viajes_didier_data = [(10000, 20101, 20105, 5.0, 600),
-                        (10000, 20101, 20105, 5.0, 600),
-                        (10001, 20302, 20105, 38.5, 290),
-                        (10002, 11504, 60101, 100.8, 800),
-                        (10002, 11504, 10101, 2.3, 495),
-                        (10003, 20101, 60101, 90.8, 650),
-                        (10004, 20101, 11501, 22.3, 490),
-                        (10005, 11504, 11501, 2.0, 500),
-                        (10006, 20102, 11502, 22.3, 490),
-                        (10007, 20103, 11503, 23.4, 500),
-                        (10008, 20104, 11504, 24.5, 510),
-                        (10009, 20105, 11505, 25.6, 520)
-                        ] 
+############################################################################      
+# Se prueba la función agregar_columna_PromocionAlta cuando las escuelas presentan un porcentaje de aprobación (cantidad de aprobados*100/cantidad de matriculados: aprobt_15'*100/'mit_15') 
+# mayor al 95%. En este caso se espera que la función devuelva el mismo dataframe pero con una columna adicional llamada "PromocionAlta" que tenga el valor de 1 para cada registro
+def test_agregar_columna_PromocionAlta_Si(spark_session):
+    escuelas_data = [
+                    (80, 'VITALIA MADRIGAL ARAYA', 1908, 1, 1, 101, 10111, 1, 1, 100, 43, 0, 0, 96, 43, 4, 0, 0, 0, 0, 0, 0, 0, 11, 6, 1, 0, 0, 0, 0, 7, 7, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 6, 6, 0, 0, 1, 1, 1, 1, 7, 7, 0, 0, 0, 23, 0, 21, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 99, 99, 1, 1, 1, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 48, 0, 0, 85, 48, 0, 0, 4, 0),
+                    (82, 'ANGLO AMERICANA', 1949, 1, 1, 101, 10112, 1, 1, 500, 250, 0, 0, 495, 250, 5, 0, 0, 0, 0, 0, 0, 0, 11, 6, 1, 0, 0, 0, 0, 30, 30, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 6, 6, 0, 0, 1, 1, 1, 1, 7, 7, 0, 0, 0, 23, 0, 21, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 99, 99, 1, 1, 1, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 48, 0, 0, 85, 48, 0, 0, 4, 0),
+                    ] 
                                     
-    viajes_didier_ds = spark_session.createDataFrame(viajes_didier_data,
-                                              ['identificador', 'codigo_postal_origen', 'codigo_postal_destino', 'kilometros', 'precio_kilometro'])
+    escuelas_data_ds = spark_session.createDataFrame(escuelas_data,
+                        ['llave', 'nombre_ins', 'creacion00', 'direg15', 'cdpr15', 'cdcan15', 'cddis15', 'regplan15', 'zona15', 'mit_15', 'mih_15', 'rt_15', 'rh_15', 'aprobt_15', 'aprobh_15', 'reprot_15', 'reproh_15', 'desa_15', 'desah_15', 'desert_15', 'deserh_15', 'act_15', 'ach_15', 'nst_15', 'nsh_15', 'sit_15', 'sih_15', 'embt_15', 'embmenor_15', 'embmayor_15', 'aat15', 'aab15', 'apt15', 'apb15', 'aest15', 'aesb15', 'aaet15', 'aaeb15', 'anat15', 'anab15', 'inft15', 'infb15', 'olat15', 'olab15', 'salt15', 'salb15', 'comt15', 'comb15', 'bibt15', 'bibb15', 'gimt15', 'gimb15', 'talt_ai15', 'talb_ai15', 'otalt15', 'otalb15', 'sodt15', 'sodb15', 'indt15', 'indb15', 'lavt15', 'lavb15', 'sant15', 'sanb15', 'tvt15', 'tvb15', 'vbt15', 'vbb15', 'dvdt15', 'dvdb15', 'cetoi15', 'cetos15', 'cepei15', 'cepes15', 'cepai15', 'cepas15', 'ceadi15', 'ceads15', 'cptoi15', 'cptos15', 'cppei15', 'cppes15', 'cppai15', 'cppas15', 'cpadi15', 'cpads15', 'bib15', 'sal15', 'pla15', 'aux15', 'serv_int15', 'expto_15', 'expdef_15', 'exptem_15', 'agrve_15', 
+                        'agrvep_15', 'agrveo_15', 'agrfe_15', 'agrfep_15', 'agrfeo_15', 'agree_15', 'agreep_15', 'agreeo_15', 'agrre_15', 'agrrep_15', 'agrreo_15', 'agrde_15', 'agrdep_15', 'agrdeo_15', 'agroe_15', 'agroep_15', 'agroeo_15', 'int_15', 'inht_15', 'rit_15', 'rih_15', 'frt_15', 'frh_15', 'itt_15', 'ith_15', 'extrant_15', 'extranh_15'])
                                                 
 
-    viajes_didier_ds.show()
+    escuelas_data_ds.show()
 
-    actual_ds = calcular_metrica_percentil(viajes_didier_ds,75)
+    actual_ds = agregar_columna_PromocionAlta(escuelas_data_ds)
 
     esperado_ds = spark_session.createDataFrame(
         [
-            ('percentil_75', 13312.0),
+            (80, 'VITALIA MADRIGAL ARAYA', 1908, 1, 1, 101, 10111, 1, 1, 100, 43, 0, 0, 96, 43, 4, 0, 0, 0, 0, 0, 0, 0, 11, 6, 1, 0, 0, 0, 0, 7, 7, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 6, 6, 0, 0, 1, 1, 1, 1, 7, 7, 0, 0, 0, 23, 0, 21, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 99, 99, 1, 1, 1, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 48, 0, 0, 85, 48, 0, 0, 4, 0, 1),
+            (82, 'ANGLO AMERICANA', 1949, 1, 1, 101, 10112, 1, 1, 500, 250, 0, 0, 495, 250, 5, 0, 0, 0, 0, 0, 0, 0, 11, 6, 1, 0, 0, 0, 0, 30, 30, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 6, 6, 0, 0, 1, 1, 1, 1, 7, 7, 0, 0, 0, 23, 0, 21, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 99, 99, 1, 1, 1, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 48, 0, 0, 85, 48, 0, 0, 4, 0, 1),
         ],
-        ['Tipo_de_Metrica', 'Valor'])
+        ['llave', 'nombre_ins', 'creacion00', 'direg15', 'cdpr15', 'cdcan15', 'cddis15', 'regplan15', 'zona15', 'mit_15', 'mih_15', 'rt_15', 'rh_15', 'aprobt_15', 'aprobh_15', 'reprot_15', 'reproh_15', 'desa_15', 'desah_15', 'desert_15', 'deserh_15', 'act_15', 'ach_15', 'nst_15', 'nsh_15', 'sit_15', 'sih_15', 'embt_15', 'embmenor_15', 'embmayor_15', 'aat15', 'aab15', 'apt15', 'apb15', 'aest15', 'aesb15', 'aaet15', 'aaeb15', 'anat15', 'anab15', 'inft15', 'infb15', 'olat15', 'olab15', 'salt15', 'salb15', 'comt15', 'comb15', 'bibt15', 'bibb15', 'gimt15', 'gimb15', 'talt_ai15', 'talb_ai15', 'otalt15', 'otalb15', 'sodt15', 'sodb15', 'indt15', 'indb15', 'lavt15', 'lavb15', 'sant15', 'sanb15', 'tvt15', 'tvb15', 'vbt15', 'vbb15', 'dvdt15', 'dvdb15', 'cetoi15', 'cetos15', 'cepei15', 'cepes15', 'cepai15', 'cepas15', 'ceadi15', 'ceads15', 'cptoi15', 'cptos15', 'cppei15', 'cppes15', 'cppai15', 'cppas15', 'cpadi15', 'cpads15', 'bib15', 'sal15', 'pla15', 'aux15', 'serv_int15', 'expto_15', 'expdef_15', 'exptem_15', 'agrve_15', 
+        'agrvep_15', 'agrveo_15', 'agrfe_15', 'agrfep_15', 'agrfeo_15', 'agree_15', 'agreep_15', 'agreeo_15', 'agrre_15', 'agrrep_15', 'agrreo_15', 'agrde_15', 'agrdep_15', 'agrdeo_15', 'agroe_15', 'agroep_15', 'agroeo_15', 'int_15', 'inht_15', 'rit_15', 'rih_15', 'frt_15', 'frh_15', 'itt_15', 'ith_15', 'extrant_15', 'extranh_15','PromocionAlta'])
 
     esperado_ds.show()
     actual_ds.show()
 
-    assert actual_ds.collect() == esperado_ds.collect()    
+    assert actual_ds.collect() == esperado_ds.collect() 
 
-def test_metrica_percentil_10(spark_session):
-    viajes_didier_data = [(10000, 20101, 20105, 5.0, 600),
-                        (10001, 20302, 20105, 38.5, 290),
-                        (10002, 11504, 60101, 100.8, 800),
-                        (10003, 20101, 60101, 90.8, 650),
-                        (10004, 20101, 11501, 22.3, 490),
-                        (10005, 11504, 11501, 2.0, 500),
-                        (10006, 20102, 11502, 22.3, 490),
-                        (10007, 20103, 11503, 23.4, 500),
-                        (10008, 20104, 11504, 24.5, 510),
-                        (10009, 20105, 11505, 25.6, 520)
-                        ] 
+# Se prueba la función agregar_columna_PromocionAlta cuando las escuelas presentan un porcentaje de aprobación (cantidad de aprobados*100/cantidad de matriculados: aprobt_15'*100/'mit_15') 
+# menor o igual al 95%. En este caso se espera que la función devuelva el mismo dataframe pero con una columna adicional llamada "PromocionAlta" que tenga el valor de 0 para cada registro
+def test_agregar_columna_PromocionAlta_No(spark_session):
+    escuelas_data = [
+                    (76, 'VIRGEN DE GUADALUPE', 1990, 1, 1, 101, 10111, 1, 1, 85, 43, 0, 0, 80, 40, 5, 4, 0, 0, 0, 0, 0, 0, 11, 6, 1, 0, 0, 0, 0, 6, 6, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 6, 6, 0, 0, 1, 1, 1, 1, 7, 7, 0, 0, 0, 23, 0, 21, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 99, 99, 1, 1, 1, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 48, 0, 0, 85, 48, 0, 0, 4, 0),
+                    (80, 'VITALIA MADRIGAL ARAYA', 1908, 1, 1, 101, 10111, 1, 1, 100, 43, 0, 0, 95, 43, 5, 0, 0, 0, 0, 0, 0, 0, 11, 6, 1, 0, 0, 0, 0, 7, 7, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 6, 6, 0, 0, 1, 1, 1, 1, 7, 7, 0, 0, 0, 23, 0, 21, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 99, 99, 1, 1, 1, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 48, 0, 0, 85, 48, 0, 0, 4, 0),
+                    ] 
                                     
-    viajes_didier_ds = spark_session.createDataFrame(viajes_didier_data,
-                                              ['identificador', 'codigo_postal_origen', 'codigo_postal_destino', 'kilometros', 'precio_kilometro'])
+    escuelas_data_ds = spark_session.createDataFrame(escuelas_data,
+                        ['llave', 'nombre_ins', 'creacion00', 'direg15', 'cdpr15', 'cdcan15', 'cddis15', 'regplan15', 'zona15', 'mit_15', 'mih_15', 'rt_15', 'rh_15', 'aprobt_15', 'aprobh_15', 'reprot_15', 'reproh_15', 'desa_15', 'desah_15', 'desert_15', 'deserh_15', 'act_15', 'ach_15', 'nst_15', 'nsh_15', 'sit_15', 'sih_15', 'embt_15', 'embmenor_15', 'embmayor_15', 'aat15', 'aab15', 'apt15', 'apb15', 'aest15', 'aesb15', 'aaet15', 'aaeb15', 'anat15', 'anab15', 'inft15', 'infb15', 'olat15', 'olab15', 'salt15', 'salb15', 'comt15', 'comb15', 'bibt15', 'bibb15', 'gimt15', 'gimb15', 'talt_ai15', 'talb_ai15', 'otalt15', 'otalb15', 'sodt15', 'sodb15', 'indt15', 'indb15', 'lavt15', 'lavb15', 'sant15', 'sanb15', 'tvt15', 'tvb15', 'vbt15', 'vbb15', 'dvdt15', 'dvdb15', 'cetoi15', 'cetos15', 'cepei15', 'cepes15', 'cepai15', 'cepas15', 'ceadi15', 'ceads15', 'cptoi15', 'cptos15', 'cppei15', 'cppes15', 'cppai15', 'cppas15', 'cpadi15', 'cpads15', 'bib15', 'sal15', 'pla15', 'aux15', 'serv_int15', 'expto_15', 'expdef_15', 'exptem_15', 'agrve_15', 
+                        'agrvep_15', 'agrveo_15', 'agrfe_15', 'agrfep_15', 'agrfeo_15', 'agree_15', 'agreep_15', 'agreeo_15', 'agrre_15', 'agrrep_15', 'agrreo_15', 'agrde_15', 'agrdep_15', 'agrdeo_15', 'agroe_15', 'agroep_15', 'agroeo_15', 'int_15', 'inht_15', 'rit_15', 'rih_15', 'frt_15', 'frh_15', 'itt_15', 'ith_15', 'extrant_15', 'extranh_15'])
                                                 
 
-    viajes_didier_ds.show()
+    escuelas_data_ds.show()
 
-    actual_ds = calcular_metrica_percentil(viajes_didier_ds,10)
+    actual_ds = agregar_columna_PromocionAlta(escuelas_data_ds)
 
     esperado_ds = spark_session.createDataFrame(
         [
-            ('percentil_10', 1000.0),
+            (76, 'VIRGEN DE GUADALUPE', 1990, 1, 1, 101, 10111, 1, 1, 85, 43, 0, 0, 80, 40, 5, 4, 0, 0, 0, 0, 0, 0, 11, 6, 1, 0, 0, 0, 0, 6, 6, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 6, 6, 0, 0, 1, 1, 1, 1, 7, 7, 0, 0, 0, 23, 0, 21, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 99, 99, 1, 1, 1, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 48, 0, 0, 85, 48, 0, 0, 4, 0, 0),
+            (80, 'VITALIA MADRIGAL ARAYA', 1908, 1, 1, 101, 10111, 1, 1, 100, 43, 0, 0, 95, 43, 5, 0, 0, 0, 0, 0, 0, 0, 11, 6, 1, 0, 0, 0, 0, 7, 7, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 6, 6, 0, 0, 1, 1, 1, 1, 7, 7, 0, 0, 0, 23, 0, 21, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 99, 99, 1, 1, 1, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 48, 0, 0, 85, 48, 0, 0, 4, 0, 0),
         ],
-        ['Tipo_de_Metrica', 'Valor'])
-
-    esperado_ds.show()
-    actual_ds.show()
-
-    assert actual_ds.collect() == esperado_ds.collect()
-
-def test_metrica_percentil_90_con_redondeo(spark_session):
-    viajes_didier_data = [(10000, 20101, 20105, 5.0, 600),
-                        (10000, 20101, 20105, 5.0, 600),
-                        (10001, 20302, 20105, 38.5, 290),
-                        (10002, 11504, 60101, 100.8, 800),
-                        (10002, 11504, 10101, 2.3, 495),
-                        (10003, 20101, 60101, 90.8, 650),
-                        (10004, 20101, 11501, 22.3, 490),
-                        (10005, 11504, 11501, 2.0, 500),
-                        (10006, 20102, 11502, 22.3, 490),
-                        (10007, 20103, 11503, 23.4, 500),
-                        (10008, 20104, 11504, 24.5, 510),
-                        (10009, 20105, 11505, 25.6, 520),
-                        (10010, 20105, 60105, 110.6, 800)
-                        ] 
-                                    
-    viajes_didier_ds = spark_session.createDataFrame(viajes_didier_data,
-                                              ['identificador', 'codigo_postal_origen', 'codigo_postal_destino', 'kilometros', 'precio_kilometro'])
-                                                
-
-    viajes_didier_ds.show()
-
-    actual_ds = calcular_metrica_percentil(viajes_didier_ds,90)
-
-    esperado_ds = spark_session.createDataFrame(
-        [
-            ('percentil_90', 81778.5),
-        ],
-        ['Tipo_de_Metrica', 'Valor'])
+        ['llave', 'nombre_ins', 'creacion00', 'direg15', 'cdpr15', 'cdcan15', 'cddis15', 'regplan15', 'zona15', 'mit_15', 'mih_15', 'rt_15', 'rh_15', 'aprobt_15', 'aprobh_15', 'reprot_15', 'reproh_15', 'desa_15', 'desah_15', 'desert_15', 'deserh_15', 'act_15', 'ach_15', 'nst_15', 'nsh_15', 'sit_15', 'sih_15', 'embt_15', 'embmenor_15', 'embmayor_15', 'aat15', 'aab15', 'apt15', 'apb15', 'aest15', 'aesb15', 'aaet15', 'aaeb15', 'anat15', 'anab15', 'inft15', 'infb15', 'olat15', 'olab15', 'salt15', 'salb15', 'comt15', 'comb15', 'bibt15', 'bibb15', 'gimt15', 'gimb15', 'talt_ai15', 'talb_ai15', 'otalt15', 'otalb15', 'sodt15', 'sodb15', 'indt15', 'indb15', 'lavt15', 'lavb15', 'sant15', 'sanb15', 'tvt15', 'tvb15', 'vbt15', 'vbb15', 'dvdt15', 'dvdb15', 'cetoi15', 'cetos15', 'cepei15', 'cepes15', 'cepai15', 'cepas15', 'ceadi15', 'ceads15', 'cptoi15', 'cptos15', 'cppei15', 'cppes15', 'cppai15', 'cppas15', 'cpadi15', 'cpads15', 'bib15', 'sal15', 'pla15', 'aux15', 'serv_int15', 'expto_15', 'expdef_15', 'exptem_15', 'agrve_15', 
+        'agrvep_15', 'agrveo_15', 'agrfe_15', 'agrfep_15', 'agrfeo_15', 'agree_15', 'agreep_15', 'agreeo_15', 'agrre_15', 'agrrep_15', 'agrreo_15', 'agrde_15', 'agrdep_15', 'agrdeo_15', 'agroe_15', 'agroep_15', 'agroeo_15', 'int_15', 'inht_15', 'rit_15', 'rih_15', 'frt_15', 'frh_15', 'itt_15', 'ith_15', 'extrant_15', 'extranh_15','PromocionAlta'])
 
     esperado_ds.show()
     actual_ds.show()
 
     assert actual_ds.collect() == esperado_ds.collect()     
-
-def test_metrica_percentil_110(spark_session):
-    viajes_didier_data = [(10000, 20101, 20105, 5.0, 600),
-                        (10000, 20101, 20105, 5.0, 600),
-                        (10001, 20302, 20105, 38.5, 290),
-                        (10002, 11504, 60101, 100.8, 800),
-                        (10002, 11504, 10101, 2.3, 495),
-                        (10003, 20101, 60101, 90.8, 650),
-                        (10004, 20101, 11501, 22.3, 490),
-                        (10005, 11504, 11501, 2.0, 500),
-                        (10006, 20102, 11502, 22.3, 490),
-                        (10007, 20103, 11503, 23.4, 500),
-                        (10008, 20104, 11504, 24.5, 510),
-                        (10009, 20105, 11505, 25.6, 520)
-                        ] 
+    
+############################################################################
+# Se prueba la función join_dataframes cuando todos los campos de la columna cddis15 del dataframe de escuelas (que corresponde al distrito) hace join con algún campo 
+# de la columna Codigo del dataset IDS (índice de desarrollo social)
+# En este caso se espera que la función devuelve un dataframe con el join de las escuelas con la información del índice de desarrollo social del distrito donde se encuentra la escuela
+def test_join_dataframes_datos_coinciden_en_ambos_dataframes(spark_session):
+    escuelas_data = [(76, 'VIRGEN DE GUADALUPE', 1990, 1, 1, 101, 10111, 1, 1, 85, 43, 0, 0, 80, 40, 5, 4, 0, 0, 0, 0, 0, 0, 11, 6, 1, 0, 0, 0, 0, 6, 6, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 6, 6, 0, 0, 1, 1, 1, 1, 7, 7, 0, 0, 0, 23, 0, 21, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 99, 99, 1, 1, 1, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 48, 0, 0, 85, 48, 0, 0, 4, 0),
+                    (80, 'VITALIA MADRIGAL ARAYA', 1908, 1, 1, 101, 10101, 1, 1, 100, 43, 0, 0, 95, 43, 5, 0, 0, 0, 0, 0, 0, 0, 11, 6, 1, 0, 0, 0, 0, 7, 7, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 6, 6, 0, 0, 1, 1, 1, 1, 7, 7, 0, 0, 0, 23, 0, 21, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 99, 99, 1, 1, 1, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 48, 0, 0, 85, 48, 0, 0, 4, 0),
+                    (82, 'ANGLO AMERICANA', 1949, 1, 3,	303, 30305, 1, 1, 500, 250, 0, 0, 495, 250, 5, 0, 0, 0, 0, 0, 0, 0, 11, 6, 1, 0, 0, 0, 0, 30, 30, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 6, 6, 0, 0, 1, 1, 1, 1, 7, 7, 0, 0, 0, 23, 0, 21, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 99, 99, 1, 1, 1, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 48, 0, 0, 85, 48, 0, 0, 4, 0),
+                    ] 
                                     
-    viajes_didier_ds = spark_session.createDataFrame(viajes_didier_data,
-                                              ['identificador', 'codigo_postal_origen', 'codigo_postal_destino', 'kilometros', 'precio_kilometro'])
+    escuelas_data_ds = spark_session.createDataFrame(escuelas_data,
+                        ['llave', 'nombre_ins', 'creacion00', 'direg15', 'cdpr15', 'cdcan15', 'cddis15', 'regplan15', 'zona15', 'mit_15', 'mih_15', 'rt_15', 'rh_15', 'aprobt_15', 'aprobh_15', 'reprot_15', 'reproh_15', 'desa_15', 'desah_15', 'desert_15', 'deserh_15', 'act_15', 'ach_15', 'nst_15', 'nsh_15', 'sit_15', 'sih_15', 'embt_15', 'embmenor_15', 'embmayor_15', 'aat15', 'aab15', 'apt15', 'apb15', 'aest15', 'aesb15', 'aaet15', 'aaeb15', 'anat15', 'anab15', 'inft15', 'infb15', 'olat15', 'olab15', 'salt15', 'salb15', 'comt15', 'comb15', 'bibt15', 'bibb15', 'gimt15', 'gimb15', 'talt_ai15', 'talb_ai15', 'otalt15', 'otalb15', 'sodt15', 'sodb15', 'indt15', 'indb15', 'lavt15', 'lavb15', 'sant15', 'sanb15', 'tvt15', 'tvb15', 'vbt15', 'vbb15', 'dvdt15', 'dvdb15', 'cetoi15', 'cetos15', 'cepei15', 'cepes15', 'cepai15', 'cepas15', 'ceadi15', 'ceads15', 'cptoi15', 'cptos15', 'cppei15', 'cppes15', 'cppai15', 'cppas15', 'cpadi15', 'cpads15', 'bib15', 'sal15', 'pla15', 'aux15', 'serv_int15', 'expto_15', 'expdef_15', 'exptem_15', 'agrve_15', 
+                        'agrvep_15', 'agrveo_15', 'agrfe_15', 'agrfep_15', 'agrfeo_15', 'agree_15', 'agreep_15', 'agreeo_15', 'agrre_15', 'agrrep_15', 'agrreo_15', 'agrde_15', 'agrdep_15', 'agrdeo_15', 'agroe_15', 'agroep_15', 'agroeo_15', 'int_15', 'inht_15', 'rit_15', 'rih_15', 'frt_15', 'frh_15', 'itt_15', 'ith_15', 'extrant_15', 'extranh_15'])
                                                 
+    escuelas_data_ds.show()
 
-    viajes_didier_ds.show()
+    ids_data = [(10111, 'San Sebastián', 45.9, 35.2, 89.1, 91.3, 77.41),
+                (10101, 'Carmen', 68.9, 36.0, 92.5, 86.0, 85.55),
+                (30305, 'Concepción', 48.1, 41.7, 67.2, 86.5, 71.6),
+               ] 
+                                    
+    ids_data_ds = spark_session.createDataFrame(ids_data,
+                        ['Codigo', 'Distrito', 'Dimension_Economica', 'Dimension_Participacion', 'Dimension_Salud', 'Dimension_Educativa', 'IDS'])
+                                                
+    ids_data_ds.show()    
 
-    actual_ds = calcular_metrica_percentil(viajes_didier_ds,110)
+    actual_ds = join_dataframes(escuelas_data_ds, ids_data_ds)
 
     esperado_ds = spark_session.createDataFrame(
         [
-            ('percentil_100', 81778.5),
+            (76, 'VIRGEN DE GUADALUPE', 1990, 1, 1, 101, 10111, 1, 1, 85, 43, 0, 0, 80, 40, 5, 4, 0, 0, 0, 0, 0, 0, 11, 6, 1, 0, 0, 0, 0, 6, 6, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 6, 6, 0, 0, 1, 1, 1, 1, 7, 7, 0, 0, 0, 23, 0, 21, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 99, 99, 1, 1, 1, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 48, 0, 0, 85, 48, 0, 0, 4, 0, 10111, 'San Sebastián', 45.9, 35.2, 89.1, 91.3, 77.41),
+            (80, 'VITALIA MADRIGAL ARAYA', 1908, 1, 1, 101, 10101, 1, 1, 100, 43, 0, 0, 95, 43, 5, 0, 0, 0, 0, 0, 0, 0, 11, 6, 1, 0, 0, 0, 0, 7, 7, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 6, 6, 0, 0, 1, 1, 1, 1, 7, 7, 0, 0, 0, 23, 0, 21, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 99, 99, 1, 1, 1, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 48, 0, 0, 85, 48, 0, 0, 4, 0, 10101, 'Carmen', 68.9, 36.0, 92.5, 86.0, 85.55),
+            (82, 'ANGLO AMERICANA', 1949, 1, 3,	303, 30305, 1, 1, 500, 250, 0, 0, 495, 250, 5, 0, 0, 0, 0, 0, 0, 0, 11, 6, 1, 0, 0, 0, 0, 30, 30, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 6, 6, 0, 0, 1, 1, 1, 1, 7, 7, 0, 0, 0, 23, 0, 21, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 99, 99, 1, 1, 1, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 48, 0, 0, 85, 48, 0, 0, 4, 0, 30305, 'Concepción', 48.1, 41.7, 67.2, 86.5, 71.6),
         ],
-        ['Tipo_de_Metrica', 'Valor'])
+        ['llave', 'nombre_ins', 'creacion00', 'direg15', 'cdpr15', 'cdcan15', 'cddis15', 'regplan15', 'zona15', 'mit_15', 'mih_15', 'rt_15', 'rh_15', 'aprobt_15', 'aprobh_15', 'reprot_15', 'reproh_15', 'desa_15', 'desah_15', 'desert_15', 'deserh_15', 'act_15', 'ach_15', 'nst_15', 'nsh_15', 'sit_15', 'sih_15', 'embt_15', 'embmenor_15', 'embmayor_15', 'aat15', 'aab15', 'apt15', 'apb15', 'aest15', 'aesb15', 'aaet15', 'aaeb15', 'anat15', 'anab15', 'inft15', 'infb15', 'olat15', 'olab15', 'salt15', 'salb15', 'comt15', 'comb15', 'bibt15', 'bibb15', 'gimt15', 'gimb15', 'talt_ai15', 'talb_ai15', 'otalt15', 'otalb15', 'sodt15', 'sodb15', 'indt15', 'indb15', 'lavt15', 'lavb15', 'sant15', 'sanb15', 'tvt15', 'tvb15', 'vbt15', 'vbb15', 'dvdt15', 'dvdb15', 'cetoi15', 'cetos15', 'cepei15', 'cepes15', 'cepai15', 'cepas15', 'ceadi15', 'ceads15', 'cptoi15', 'cptos15', 'cppei15', 'cppes15', 'cppai15', 'cppas15', 'cpadi15', 'cpads15', 'bib15', 'sal15', 'pla15', 'aux15', 'serv_int15', 'expto_15', 'expdef_15', 'exptem_15', 'agrve_15', 
+         'agrvep_15', 'agrveo_15', 'agrfe_15', 'agrfep_15', 'agrfeo_15', 'agree_15', 'agreep_15', 'agreeo_15', 'agrre_15', 'agrrep_15', 'agrreo_15', 'agrde_15', 'agrdep_15', 'agrdeo_15', 'agroe_15', 'agroep_15', 'agroeo_15', 'int_15', 'inht_15', 'rit_15', 'rih_15', 'frt_15', 'frh_15', 'itt_15', 'ith_15', 'extrant_15', 'extranh_15', 'Codigo', 'Distrito', 'Dimension_Economica', 'Dimension_Participacion', 'Dimension_Salud', 'Dimension_Educativa', 'IDS'])
 
     esperado_ds.show()
     actual_ds.show()
 
-    assert actual_ds.collect() == esperado_ds.collect()   
+    assert actual_ds.collect() == esperado_ds.collect()       
 
-def test_metrica_percentil_negativo(spark_session):
-    viajes_didier_data = [(10000, 20101, 20105, 5.0, 600),
-                        (10000, 20101, 20105, 5.0, 600),
-                        (10001, 20302, 20105, 38.5, 290),
-                        (10002, 11504, 60101, 100.8, 800),
-                        (10002, 11504, 10101, 2.3, 495),
-                        (10003, 20101, 60101, 90.8, 650),
-                        (10004, 20101, 11501, 22.3, 490),
-                        (10005, 11504, 11501, 2.0, 500),
-                        (10006, 20102, 11502, 22.3, 490),
-                        (10007, 20103, 11503, 23.4, 500),
-                        (10008, 20104, 11504, 24.5, 510),
-                        (10009, 20105, 11505, 25.6, 520)
-                        ] 
+# Se prueba la función join_dataframes cuando hay escuelas registradas cuyo distrito no tiene el índice de desarrollo social registrado en la dataset de IDS 
+# En este caso se espera que la función NO devuelva esa escuela en el join 
+def test_join_dataframes_distrito_de_escuela_no_tiene_ids_registrado(spark_session):
+    escuelas_data = [(76, 'VIRGEN DE GUADALUPE', 1990, 1, 1, 101, 10111, 1, 1, 85, 43, 0, 0, 80, 40, 5, 4, 0, 0, 0, 0, 0, 0, 11, 6, 1, 0, 0, 0, 0, 6, 6, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 6, 6, 0, 0, 1, 1, 1, 1, 7, 7, 0, 0, 0, 23, 0, 21, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 99, 99, 1, 1, 1, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 48, 0, 0, 85, 48, 0, 0, 4, 0),
+                    (80, 'VITALIA MADRIGAL ARAYA', 1908, 1, 1, 101, 10101, 1, 1, 100, 43, 0, 0, 95, 43, 5, 0, 0, 0, 0, 0, 0, 0, 11, 6, 1, 0, 0, 0, 0, 7, 7, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 6, 6, 0, 0, 1, 1, 1, 1, 7, 7, 0, 0, 0, 23, 0, 21, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 99, 99, 1, 1, 1, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 48, 0, 0, 85, 48, 0, 0, 4, 0),
+                    (82, 'ANGLO AMERICANA', 1949, 1, 3,	303, 30305, 1, 1, 500, 250, 0, 0, 495, 250, 5, 0, 0, 0, 0, 0, 0, 0, 11, 6, 1, 0, 0, 0, 0, 30, 30, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 6, 6, 0, 0, 1, 1, 1, 1, 7, 7, 0, 0, 0, 23, 0, 21, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 99, 99, 1, 1, 1, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 48, 0, 0, 85, 48, 0, 0, 4, 0),
+                    ] 
                                     
-    viajes_didier_ds = spark_session.createDataFrame(viajes_didier_data,
-                                              ['identificador', 'codigo_postal_origen', 'codigo_postal_destino', 'kilometros', 'precio_kilometro'])
+    escuelas_data_ds = spark_session.createDataFrame(escuelas_data,
+                        ['llave', 'nombre_ins', 'creacion00', 'direg15', 'cdpr15', 'cdcan15', 'cddis15', 'regplan15', 'zona15', 'mit_15', 'mih_15', 'rt_15', 'rh_15', 'aprobt_15', 'aprobh_15', 'reprot_15', 'reproh_15', 'desa_15', 'desah_15', 'desert_15', 'deserh_15', 'act_15', 'ach_15', 'nst_15', 'nsh_15', 'sit_15', 'sih_15', 'embt_15', 'embmenor_15', 'embmayor_15', 'aat15', 'aab15', 'apt15', 'apb15', 'aest15', 'aesb15', 'aaet15', 'aaeb15', 'anat15', 'anab15', 'inft15', 'infb15', 'olat15', 'olab15', 'salt15', 'salb15', 'comt15', 'comb15', 'bibt15', 'bibb15', 'gimt15', 'gimb15', 'talt_ai15', 'talb_ai15', 'otalt15', 'otalb15', 'sodt15', 'sodb15', 'indt15', 'indb15', 'lavt15', 'lavb15', 'sant15', 'sanb15', 'tvt15', 'tvb15', 'vbt15', 'vbb15', 'dvdt15', 'dvdb15', 'cetoi15', 'cetos15', 'cepei15', 'cepes15', 'cepai15', 'cepas15', 'ceadi15', 'ceads15', 'cptoi15', 'cptos15', 'cppei15', 'cppes15', 'cppai15', 'cppas15', 'cpadi15', 'cpads15', 'bib15', 'sal15', 'pla15', 'aux15', 'serv_int15', 'expto_15', 'expdef_15', 'exptem_15', 'agrve_15', 
+                        'agrvep_15', 'agrveo_15', 'agrfe_15', 'agrfep_15', 'agrfeo_15', 'agree_15', 'agreep_15', 'agreeo_15', 'agrre_15', 'agrrep_15', 'agrreo_15', 'agrde_15', 'agrdep_15', 'agrdeo_15', 'agroe_15', 'agroep_15', 'agroeo_15', 'int_15', 'inht_15', 'rit_15', 'rih_15', 'frt_15', 'frh_15', 'itt_15', 'ith_15', 'extrant_15', 'extranh_15'])
                                                 
+    escuelas_data_ds.show()
 
-    viajes_didier_ds.show()
+    ids_data = [(10111, 'San Sebastián', 45.9, 35.2, 89.1, 91.3, 77.41),
+                (10101, 'Carmen', 68.9, 36.0, 92.5, 86.0, 85.55),
+               ] 
+                                    
+    ids_data_ds = spark_session.createDataFrame(ids_data,
+                        ['Codigo', 'Distrito', 'Dimension_Economica', 'Dimension_Participacion', 'Dimension_Salud', 'Dimension_Educativa', 'IDS'])
+                                                
+    ids_data_ds.show()    
 
-    actual_ds = calcular_metrica_percentil(viajes_didier_ds,-1)
+    actual_ds = join_dataframes(escuelas_data_ds, ids_data_ds)
 
     esperado_ds = spark_session.createDataFrame(
         [
-            ('percentil_0', 1000.0),
+            (76, 'VIRGEN DE GUADALUPE', 1990, 1, 1, 101, 10111, 1, 1, 85, 43, 0, 0, 80, 40, 5, 4, 0, 0, 0, 0, 0, 0, 11, 6, 1, 0, 0, 0, 0, 6, 6, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 6, 6, 0, 0, 1, 1, 1, 1, 7, 7, 0, 0, 0, 23, 0, 21, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 99, 99, 1, 1, 1, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 48, 0, 0, 85, 48, 0, 0, 4, 0, 10111, 'San Sebastián', 45.9, 35.2, 89.1, 91.3, 77.41),
+            (80, 'VITALIA MADRIGAL ARAYA', 1908, 1, 1, 101, 10101, 1, 1, 100, 43, 0, 0, 95, 43, 5, 0, 0, 0, 0, 0, 0, 0, 11, 6, 1, 0, 0, 0, 0, 7, 7, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 6, 6, 0, 0, 1, 1, 1, 1, 7, 7, 0, 0, 0, 23, 0, 21, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 99, 99, 1, 1, 1, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 48, 0, 0, 85, 48, 0, 0, 4, 0, 10101, 'Carmen', 68.9, 36.0, 92.5, 86.0, 85.55),
         ],
-        ['Tipo_de_Metrica', 'Valor'])
-
-    esperado_ds.show()
-    actual_ds.show()
-
-    assert actual_ds.collect() == esperado_ds.collect()           
-
-#Pruebas para la función obtener_metrica_codigo_postal_origen_con_mas_ingresos
-
-def test_metrica_codigo_postal_origen_con_mas_ingresos_1_viaje_por_codigo_postal(spark_session):
-    viajes_didier_data = [(10000, 20101, 20105, 5.0, 600),
-                        (10820, 20302, 20105, 38.5, 290),
-                        (10011, 11504, 20101, 20.0, 800)] 
-                                    
-    viajes_didier_ds = spark_session.createDataFrame(viajes_didier_data,
-                                              ['identificador', 'codigo_postal_origen', 'codigo_postal_destino', 'kilometros', 'precio_kilometro'])
-                                                
-
-    viajes_didier_ds.show()
-
-    actual_ds = obtener_metrica_codigo_postal_origen_con_mas_ingresos(viajes_didier_ds)
-
-    esperado_ds = spark_session.createDataFrame(
-        [
-            ('codigo_postal_origen_con_mas_ingresos', 11504),
-        ],
-        ['Tipo_de_Metrica', 'Valor'])
-
-    esperado_ds.show()
-    actual_ds.show()
-
-    assert actual_ds.collect() == esperado_ds.collect()
-
-def test_metrica_codigo_postal_origen_con_mas_ingresos_varios_viajes_por_codigo_postal(spark_session):
-    viajes_didier_data = [(10000, 20101, 20105, 5.0, 600),
-                        (10002, 20302, 20105, 38.5, 290),
-                        (10003, 11504, 20101, 20.0, 800),
-                        (10001, 20101, 60101, 100.8, 650),
-                        (10001, 20101, 11501, 22.3, 490),
-                        (10198, 11504, 11501, 2.0, 500)] 
-                                    
-    viajes_didier_ds = spark_session.createDataFrame(viajes_didier_data,
-                                              ['identificador', 'codigo_postal_origen', 'codigo_postal_destino', 'kilometros', 'precio_kilometro'])
-                                                
-
-    viajes_didier_ds.show()
-
-    actual_ds = obtener_metrica_codigo_postal_origen_con_mas_ingresos(viajes_didier_ds)
-
-    esperado_ds = spark_session.createDataFrame(
-        [
-            ('codigo_postal_origen_con_mas_ingresos', 20101),
-        ],
-        ['Tipo_de_Metrica', 'Valor'])
-
-    esperado_ds.show()
-    actual_ds.show()
-
-    assert actual_ds.collect() == esperado_ds.collect()   
-
-def test_metrica_codigo_postal_origen_con_mas_ingresos_codigos_postales_empatados(spark_session):
-    viajes_didier_data = [(10198, 20101, 60101, 100.8, 650),
-                        (10198, 20102, 11501, 22.3, 490),
-                        (10001, 20101, 60101, 100.8, 650),
-                        (10001, 20102, 11501, 22.3, 490)] 
-                                    
-    viajes_didier_ds = spark_session.createDataFrame(viajes_didier_data,
-                                              ['identificador', 'codigo_postal_origen', 'codigo_postal_destino', 'kilometros', 'precio_kilometro'])
-                                                
-
-    viajes_didier_ds.show()
-
-    actual_ds = obtener_metrica_codigo_postal_origen_con_mas_ingresos(viajes_didier_ds)
-
-    esperado_ds = spark_session.createDataFrame(
-        [
-            ('codigo_postal_origen_con_mas_ingresos', 20101),
-        ],
-        ['Tipo_de_Metrica', 'Valor'])
-
-    esperado_ds.show()
-    actual_ds.show()
-
-    assert actual_ds.collect() == esperado_ds.collect()     
-
-def test_metrica_codigo_postal_origen_con_mas_ingresos_registros_con_datos_invalidos(spark_session):
-    viajes_didier_data = [(10000, 20101, 20105, 0.0, 600),
-                        (10002, 20302, 20105, 38.5, 290),
-                        (10003, None, 20101, 20.0, 800),
-                        (10001, 20101, 60101, -100.8, 650),
-                        (10001, 20101, 11501, 22.3, None),
-                        (10198, 11504, 11501, 2.0, 500)] 
-                                    
-    viajes_didier_ds = spark_session.createDataFrame(viajes_didier_data,
-                                              ['identificador', 'codigo_postal_origen', 'codigo_postal_destino', 'kilometros', 'precio_kilometro'])
-                                                
-
-    viajes_didier_ds.show()
-
-    actual_ds = obtener_metrica_codigo_postal_origen_con_mas_ingresos(viajes_didier_ds)
-
-    esperado_ds = spark_session.createDataFrame(
-        [
-            ('codigo_postal_origen_con_mas_ingresos', 20302),
-        ],
-        ['Tipo_de_Metrica', 'Valor'])
+        ['llave', 'nombre_ins', 'creacion00', 'direg15', 'cdpr15', 'cdcan15', 'cddis15', 'regplan15', 'zona15', 'mit_15', 'mih_15', 'rt_15', 'rh_15', 'aprobt_15', 'aprobh_15', 'reprot_15', 'reproh_15', 'desa_15', 'desah_15', 'desert_15', 'deserh_15', 'act_15', 'ach_15', 'nst_15', 'nsh_15', 'sit_15', 'sih_15', 'embt_15', 'embmenor_15', 'embmayor_15', 'aat15', 'aab15', 'apt15', 'apb15', 'aest15', 'aesb15', 'aaet15', 'aaeb15', 'anat15', 'anab15', 'inft15', 'infb15', 'olat15', 'olab15', 'salt15', 'salb15', 'comt15', 'comb15', 'bibt15', 'bibb15', 'gimt15', 'gimb15', 'talt_ai15', 'talb_ai15', 'otalt15', 'otalb15', 'sodt15', 'sodb15', 'indt15', 'indb15', 'lavt15', 'lavb15', 'sant15', 'sanb15', 'tvt15', 'tvb15', 'vbt15', 'vbb15', 'dvdt15', 'dvdb15', 'cetoi15', 'cetos15', 'cepei15', 'cepes15', 'cepai15', 'cepas15', 'ceadi15', 'ceads15', 'cptoi15', 'cptos15', 'cppei15', 'cppes15', 'cppai15', 'cppas15', 'cpadi15', 'cpads15', 'bib15', 'sal15', 'pla15', 'aux15', 'serv_int15', 'expto_15', 'expdef_15', 'exptem_15', 'agrve_15', 
+         'agrvep_15', 'agrveo_15', 'agrfe_15', 'agrfep_15', 'agrfeo_15', 'agree_15', 'agreep_15', 'agreeo_15', 'agrre_15', 'agrrep_15', 'agrreo_15', 'agrde_15', 'agrdep_15', 'agrdeo_15', 'agroe_15', 'agroep_15', 'agroeo_15', 'int_15', 'inht_15', 'rit_15', 'rih_15', 'frt_15', 'frh_15', 'itt_15', 'ith_15', 'extrant_15', 'extranh_15', 'Codigo', 'Distrito', 'Dimension_Economica', 'Dimension_Participacion', 'Dimension_Salud', 'Dimension_Educativa', 'IDS'])
 
     esperado_ds.show()
     actual_ds.show()
 
     assert actual_ds.collect() == esperado_ds.collect()  
 
-#Pruebas para la función obtener_metrica_codigo_postal_destino_con_mas_ingresos
-
-def test_metrica_codigo_postal_destino_con_mas_ingresos_1_viaje_por_codigo_postal(spark_session):
-    viajes_didier_data = [(10000, 20101, 20105, 5.0, 600),
-                        (10820, 20302, 20106, 38.5, 290),
-                        (10011, 11504, 20101, 20.0, 800)] 
+# Se prueba la función join_dataframes cuando hay distritos en el dataset de IDS (índice de desarrollo social) en los cuales no se tienen escuelas registradas
+# En este caso se espera que la función NO devuelva ese registro en el join 
+def test_join_dataframes_distrito_de_ids_no_tiene_escuelas_registradas(spark_session):
+    escuelas_data = [(76, 'VIRGEN DE GUADALUPE', 1990, 1, 1, 101, 10111, 1, 1, 85, 43, 0, 0, 80, 40, 5, 4, 0, 0, 0, 0, 0, 0, 11, 6, 1, 0, 0, 0, 0, 6, 6, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 6, 6, 0, 0, 1, 1, 1, 1, 7, 7, 0, 0, 0, 23, 0, 21, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 99, 99, 1, 1, 1, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 48, 0, 0, 85, 48, 0, 0, 4, 0),
+                    (80, 'VITALIA MADRIGAL ARAYA', 1908, 1, 1, 101, 10101, 1, 1, 100, 43, 0, 0, 95, 43, 5, 0, 0, 0, 0, 0, 0, 0, 11, 6, 1, 0, 0, 0, 0, 7, 7, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 6, 6, 0, 0, 1, 1, 1, 1, 7, 7, 0, 0, 0, 23, 0, 21, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 99, 99, 1, 1, 1, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 48, 0, 0, 85, 48, 0, 0, 4, 0),
+                    (82, 'ANGLO AMERICANA', 1949, 1, 3,	303, 30305, 1, 1, 500, 250, 0, 0, 495, 250, 5, 0, 0, 0, 0, 0, 0, 0, 11, 6, 1, 0, 0, 0, 0, 30, 30, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 6, 6, 0, 0, 1, 1, 1, 1, 7, 7, 0, 0, 0, 23, 0, 21, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 99, 99, 1, 1, 1, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 48, 0, 0, 85, 48, 0, 0, 4, 0),
+                    ] 
                                     
-    viajes_didier_ds = spark_session.createDataFrame(viajes_didier_data,
-                                              ['identificador', 'codigo_postal_origen', 'codigo_postal_destino', 'kilometros', 'precio_kilometro'])
+    escuelas_data_ds = spark_session.createDataFrame(escuelas_data,
+                        ['llave', 'nombre_ins', 'creacion00', 'direg15', 'cdpr15', 'cdcan15', 'cddis15', 'regplan15', 'zona15', 'mit_15', 'mih_15', 'rt_15', 'rh_15', 'aprobt_15', 'aprobh_15', 'reprot_15', 'reproh_15', 'desa_15', 'desah_15', 'desert_15', 'deserh_15', 'act_15', 'ach_15', 'nst_15', 'nsh_15', 'sit_15', 'sih_15', 'embt_15', 'embmenor_15', 'embmayor_15', 'aat15', 'aab15', 'apt15', 'apb15', 'aest15', 'aesb15', 'aaet15', 'aaeb15', 'anat15', 'anab15', 'inft15', 'infb15', 'olat15', 'olab15', 'salt15', 'salb15', 'comt15', 'comb15', 'bibt15', 'bibb15', 'gimt15', 'gimb15', 'talt_ai15', 'talb_ai15', 'otalt15', 'otalb15', 'sodt15', 'sodb15', 'indt15', 'indb15', 'lavt15', 'lavb15', 'sant15', 'sanb15', 'tvt15', 'tvb15', 'vbt15', 'vbb15', 'dvdt15', 'dvdb15', 'cetoi15', 'cetos15', 'cepei15', 'cepes15', 'cepai15', 'cepas15', 'ceadi15', 'ceads15', 'cptoi15', 'cptos15', 'cppei15', 'cppes15', 'cppai15', 'cppas15', 'cpadi15', 'cpads15', 'bib15', 'sal15', 'pla15', 'aux15', 'serv_int15', 'expto_15', 'expdef_15', 'exptem_15', 'agrve_15', 
+                        'agrvep_15', 'agrveo_15', 'agrfe_15', 'agrfep_15', 'agrfeo_15', 'agree_15', 'agreep_15', 'agreeo_15', 'agrre_15', 'agrrep_15', 'agrreo_15', 'agrde_15', 'agrdep_15', 'agrdeo_15', 'agroe_15', 'agroep_15', 'agroeo_15', 'int_15', 'inht_15', 'rit_15', 'rih_15', 'frt_15', 'frh_15', 'itt_15', 'ith_15', 'extrant_15', 'extranh_15'])
                                                 
+    escuelas_data_ds.show()
 
-    viajes_didier_ds.show()
-
-    actual_ds = obtener_metrica_codigo_postal_destino_con_mas_ingresos(viajes_didier_ds)
-
-    esperado_ds = spark_session.createDataFrame(
-        [
-            ('codigo_postal_destino_con_mas_ingresos', 20101),
-        ],
-        ['Tipo_de_Metrica', 'Valor'])
-
-    esperado_ds.show()
-    actual_ds.show()
-
-    assert actual_ds.collect() == esperado_ds.collect()
-
-def test_metrica_codigo_postal_destino_con_mas_ingresos_varios_viajes_por_codigo_postal(spark_session):
-    viajes_didier_data = [(10000, 20101, 20105, 5.0, 600),
-                        (10002, 20302, 20105, 38.5, 290),
-                        (10003, 11504, 60101, 100.8, 800),
-                        (10001, 20101, 60101, 90.8, 650),
-                        (10001, 20101, 11501, 22.3, 490),
-                        (10198, 11504, 11501, 2.0, 500)] 
+    ids_data = [(10111, 'San Sebastián', 45.9, 35.2, 89.1, 91.3, 77.41),
+                (10101, 'Carmen', 68.9, 36.0, 92.5, 86.0, 85.55),
+                (30305, 'Concepción', 48.1, 41.7, 67.2, 86.5, 71.6),
+                (60506, 'Bahía Drake', 9.3, 38.0, 61.4, 36.6, 44.5)
+               ] 
                                     
-    viajes_didier_ds = spark_session.createDataFrame(viajes_didier_data,
-                                              ['identificador', 'codigo_postal_origen', 'codigo_postal_destino', 'kilometros', 'precio_kilometro'])
+    ids_data_ds = spark_session.createDataFrame(ids_data,
+                        ['Codigo', 'Distrito', 'Dimension_Economica', 'Dimension_Participacion', 'Dimension_Salud', 'Dimension_Educativa', 'IDS'])
                                                 
+    ids_data_ds.show()    
 
-    viajes_didier_ds.show()
-
-    actual_ds = obtener_metrica_codigo_postal_destino_con_mas_ingresos(viajes_didier_ds)
+    actual_ds = join_dataframes(escuelas_data_ds, ids_data_ds)
 
     esperado_ds = spark_session.createDataFrame(
         [
-            ('codigo_postal_destino_con_mas_ingresos', 60101),
+            (76, 'VIRGEN DE GUADALUPE', 1990, 1, 1, 101, 10111, 1, 1, 85, 43, 0, 0, 80, 40, 5, 4, 0, 0, 0, 0, 0, 0, 11, 6, 1, 0, 0, 0, 0, 6, 6, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 6, 6, 0, 0, 1, 1, 1, 1, 7, 7, 0, 0, 0, 23, 0, 21, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 99, 99, 1, 1, 1, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 48, 0, 0, 85, 48, 0, 0, 4, 0, 10111, 'San Sebastián', 45.9, 35.2, 89.1, 91.3, 77.41),
+            (80, 'VITALIA MADRIGAL ARAYA', 1908, 1, 1, 101, 10101, 1, 1, 100, 43, 0, 0, 95, 43, 5, 0, 0, 0, 0, 0, 0, 0, 11, 6, 1, 0, 0, 0, 0, 7, 7, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 6, 6, 0, 0, 1, 1, 1, 1, 7, 7, 0, 0, 0, 23, 0, 21, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 99, 99, 1, 1, 1, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 48, 0, 0, 85, 48, 0, 0, 4, 0, 10101, 'Carmen', 68.9, 36.0, 92.5, 86.0, 85.55),
+            (82, 'ANGLO AMERICANA', 1949, 1, 3,	303, 30305, 1, 1, 500, 250, 0, 0, 495, 250, 5, 0, 0, 0, 0, 0, 0, 0, 11, 6, 1, 0, 0, 0, 0, 30, 30, 2, 2, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 6, 6, 0, 0, 1, 1, 1, 1, 7, 7, 0, 0, 0, 23, 0, 21, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 99, 99, 1, 1, 1, 0, 0, 0, 3, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 48, 0, 0, 85, 48, 0, 0, 4, 0, 30305, 'Concepción', 48.1, 41.7, 67.2, 86.5, 71.6),
         ],
-        ['Tipo_de_Metrica', 'Valor'])
+        ['llave', 'nombre_ins', 'creacion00', 'direg15', 'cdpr15', 'cdcan15', 'cddis15', 'regplan15', 'zona15', 'mit_15', 'mih_15', 'rt_15', 'rh_15', 'aprobt_15', 'aprobh_15', 'reprot_15', 'reproh_15', 'desa_15', 'desah_15', 'desert_15', 'deserh_15', 'act_15', 'ach_15', 'nst_15', 'nsh_15', 'sit_15', 'sih_15', 'embt_15', 'embmenor_15', 'embmayor_15', 'aat15', 'aab15', 'apt15', 'apb15', 'aest15', 'aesb15', 'aaet15', 'aaeb15', 'anat15', 'anab15', 'inft15', 'infb15', 'olat15', 'olab15', 'salt15', 'salb15', 'comt15', 'comb15', 'bibt15', 'bibb15', 'gimt15', 'gimb15', 'talt_ai15', 'talb_ai15', 'otalt15', 'otalb15', 'sodt15', 'sodb15', 'indt15', 'indb15', 'lavt15', 'lavb15', 'sant15', 'sanb15', 'tvt15', 'tvb15', 'vbt15', 'vbb15', 'dvdt15', 'dvdb15', 'cetoi15', 'cetos15', 'cepei15', 'cepes15', 'cepai15', 'cepas15', 'ceadi15', 'ceads15', 'cptoi15', 'cptos15', 'cppei15', 'cppes15', 'cppai15', 'cppas15', 'cpadi15', 'cpads15', 'bib15', 'sal15', 'pla15', 'aux15', 'serv_int15', 'expto_15', 'expdef_15', 'exptem_15', 'agrve_15', 
+         'agrvep_15', 'agrveo_15', 'agrfe_15', 'agrfep_15', 'agrfeo_15', 'agree_15', 'agreep_15', 'agreeo_15', 'agrre_15', 'agrrep_15', 'agrreo_15', 'agrde_15', 'agrdep_15', 'agrdeo_15', 'agroe_15', 'agroep_15', 'agroeo_15', 'int_15', 'inht_15', 'rit_15', 'rih_15', 'frt_15', 'frh_15', 'itt_15', 'ith_15', 'extrant_15', 'extranh_15', 'Codigo', 'Distrito', 'Dimension_Economica', 'Dimension_Participacion', 'Dimension_Salud', 'Dimension_Educativa', 'IDS'])
 
     esperado_ds.show()
     actual_ds.show()
 
-    assert actual_ds.collect() == esperado_ds.collect()   
+    assert actual_ds.collect() == esperado_ds.collect()                
 
-def test_metrica_codigo_postal_destino_con_mas_ingresos_codigos_postales_empatados(spark_session):
-    viajes_didier_data = [(10198, 20101, 60101, 100.8, 650),
-                        (10198, 20102, 11501, 22.3, 490),
-                        (10001, 20101, 60101, 100.8, 650),
-                        (10001, 20102, 11501, 22.3, 490)] 
-                                    
-    viajes_didier_ds = spark_session.createDataFrame(viajes_didier_data,
-                                              ['identificador', 'codigo_postal_origen', 'codigo_postal_destino', 'kilometros', 'precio_kilometro'])
-                                                
 
-    viajes_didier_ds.show()
 
-    actual_ds = obtener_metrica_codigo_postal_destino_con_mas_ingresos(viajes_didier_ds)
 
-    esperado_ds = spark_session.createDataFrame(
-        [
-            ('codigo_postal_destino_con_mas_ingresos', 60101),
-        ],
-        ['Tipo_de_Metrica', 'Valor'])
-
-    esperado_ds.show()
-    actual_ds.show()
-
-    assert actual_ds.collect() == esperado_ds.collect()     
-
-def test_metrica_codigo_postal_destino_con_mas_ingresos_registros_con_datos_invalidos(spark_session):
-    viajes_didier_data = [(10000, 20101, 20105, 0.0, 600),
-                        (10002, 20302, 20105, 38.5, 290),
-                        (10003, 20102, None, 20.0, 800),
-                        (10001, 20101, 60101, -100.8, 650),
-                        (10001, 20101, 11501, 22.3, None),
-                        (10198, 11504, 11501, 2.0, 500)] 
-                                    
-    viajes_didier_ds = spark_session.createDataFrame(viajes_didier_data,
-                                              ['identificador', 'codigo_postal_origen', 'codigo_postal_destino', 'kilometros', 'precio_kilometro'])
-                                                
-
-    viajes_didier_ds.show()
-
-    actual_ds = obtener_metrica_codigo_postal_destino_con_mas_ingresos(viajes_didier_ds)
-
-    esperado_ds = spark_session.createDataFrame(
-        [
-            ('codigo_postal_destino_con_mas_ingresos', 20105),
-        ],
-        ['Tipo_de_Metrica', 'Valor'])
-
-    esperado_ds.show()
-    actual_ds.show()
-
-    assert actual_ds.collect() == esperado_ds.collect()  
-
-# Pruebas para la función unir_dataframes_metricas 
-def test_unir_dataframes_metricas_verifica_datos(spark_session):
-    metrica_persona_con_mas_kilometros_data = [('persona_con_mas_kilometros', 10001)]
-    metrica_persona_con_mas_kilometros_ds = spark_session.createDataFrame(metrica_persona_con_mas_kilometros_data, 
-                                            ['Tipo_de_Metrica', 'Valor'])
-                                                
-    metrica_persona_con_mas_ingresos_data = [('persona_con_mas_ingresos', 10002)]
-    metrica_persona_con_mas_ingresos_ds = spark_session.createDataFrame(metrica_persona_con_mas_ingresos_data,
-                                              ['Tipo_de_Metrica', 'Valor'])
-
-    metrica_percentil_25_data = [('percentil_25', 125005)]
-    metrica_percentil_25_ds = spark_session.createDataFrame(metrica_percentil_25_data,
-                                              ['Tipo_de_Metrica', 'Valor'])  
-    
-    metrica_percentil_50_data = [('percentil_50', 145959)]
-    metrica_percentil_50_ds = spark_session.createDataFrame(metrica_percentil_50_data,
-                                              ['Tipo_de_Metrica', 'Valor'])  
-
-    metrica_percentil_75_data = [('percentil_75', 148642)]
-    metrica_percentil_75_ds = spark_session.createDataFrame(metrica_percentil_75_data,
-                                              ['Tipo_de_Metrica', 'Valor'])                                                                                                                                        
-                                                
-    metrica_codigo_postal_origen_con_mas_ingresos_data = [('codigo_postal_origen_con_mas_ingresos', 10101)]
-    metrica_codigo_postal_origen_con_mas_ingresos_ds = spark_session.createDataFrame(metrica_codigo_postal_origen_con_mas_ingresos_data,
-                                              ['Tipo_de_Metrica', 'Valor'])  
-
-    metrica_codigo_postal_destino_con_mas_ingresos_data = [('codigo_postal_destino_con_mas_ingresos', 30101)]
-    metrica_codigo_postal_destino_con_mas_ingresos_ds = spark_session.createDataFrame(metrica_codigo_postal_destino_con_mas_ingresos_data,
-                                              ['Tipo_de_Metrica', 'Valor'])                                                                                              
-    
-    actual_ds = unir_dataframes_metricas(metrica_persona_con_mas_kilometros_ds, metrica_persona_con_mas_ingresos_ds, metrica_percentil_25_ds, metrica_percentil_50_ds, metrica_percentil_75_ds, metrica_codigo_postal_origen_con_mas_ingresos_ds, metrica_codigo_postal_destino_con_mas_ingresos_ds)
-
-    esperado_ds = spark_session.createDataFrame(
-        [
-            ('persona_con_mas_kilometros', 10001),
-            ('persona_con_mas_ingresos', 10002),
-            ('percentil_25', 125005),
-            ('percentil_50', 145959),
-            ('percentil_75', 148642),
-            ('codigo_postal_origen_con_mas_ingresos', 10101),
-            ('codigo_postal_destino_con_mas_ingresos', 30101),
-        ],
-        ['Tipo_de_Metrica', 'Valor'])
-
-    esperado_ds.show()
-    actual_ds.show()
-
-    assert actual_ds.collect() == esperado_ds.collect()  
-
-def test_unir_dataframes_metricas_verifica_cantidad_registros(spark_session):
-    metrica_persona_con_mas_kilometros_data = [('persona_con_mas_kilometros', 10001)]
-    metrica_persona_con_mas_kilometros_ds = spark_session.createDataFrame(metrica_persona_con_mas_kilometros_data,
-                                              ['Tipo_de_Metrica', 'Valor'])
-                                                
-    metrica_persona_con_mas_ingresos_data = [('persona_con_mas_ingresos', 10002)]
-    metrica_persona_con_mas_ingresos_ds = spark_session.createDataFrame(metrica_persona_con_mas_ingresos_data,
-                                              ['Tipo_de_Metrica', 'Valor'])
-
-    metrica_percentil_25_data = [('percentil_25', 125005.0)]
-    metrica_percentil_25_ds = spark_session.createDataFrame(metrica_percentil_25_data,
-                                              ['Tipo_de_Metrica', 'Valor'])  
-    
-    metrica_percentil_50_data = [('percentil_50', 145959.0)]
-    metrica_percentil_50_ds = spark_session.createDataFrame(metrica_percentil_50_data,
-                                              ['Tipo_de_Metrica', 'Valor'])  
-
-    metrica_percentil_75_data = [('percentil_75', 148642.0)]
-    metrica_percentil_75_ds = spark_session.createDataFrame(metrica_percentil_75_data,
-                                              ['Tipo_de_Metrica', 'Valor'])                                                                                                                                        
-                                                
-    metrica_codigo_postal_origen_con_mas_ingresos_data = [('codigo_postal_origen_con_mas_ingresos', 10101)]
-    metrica_codigo_postal_origen_con_mas_ingresos_ds = spark_session.createDataFrame(metrica_codigo_postal_origen_con_mas_ingresos_data,
-                                              ['Tipo_de_Metrica', 'Valor'])  
-
-    metrica_codigo_postal_destino_con_mas_ingresos_data = [('codigo_postal_destino_con_mas_ingresos', 30101)]
-    metrica_codigo_postal_destino_con_mas_ingresos_ds = spark_session.createDataFrame(metrica_codigo_postal_destino_con_mas_ingresos_data,
-                                              ['Tipo_de_Metrica', 'Valor'])                                                                                              
-    
-    actual_ds = unir_dataframes_metricas(metrica_persona_con_mas_kilometros_ds, metrica_persona_con_mas_ingresos_ds, metrica_percentil_25_ds, metrica_percentil_50_ds, metrica_percentil_75_ds, metrica_codigo_postal_origen_con_mas_ingresos_ds, metrica_codigo_postal_destino_con_mas_ingresos_ds)
-    actual = actual_ds.count()
-
-    esperado = metrica_persona_con_mas_kilometros_ds.count() + metrica_persona_con_mas_ingresos_ds.count() + metrica_percentil_25_ds.count() + metrica_percentil_50_ds.count() + metrica_percentil_75_ds.count() + metrica_codigo_postal_origen_con_mas_ingresos_ds.count() + metrica_codigo_postal_destino_con_mas_ingresos_ds.count()
-
-    assert actual == esperado  
