@@ -1,1 +1,1 @@
-pyspark < proyecto.py --packages org.postgresql:postgresql:42.2.14
+spark-submit --driver-class-path ./postgresql-42.2.14.jar proyecto.py

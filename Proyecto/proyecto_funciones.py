@@ -36,11 +36,9 @@ def cargar_archivos_csv():
         .option("delimiter", ",") \
         .load()   
 
-    return  escuelas_df, ids_df        
+    return  escuelas_df, ids_df
 
    
-# cargar_archivos_csv()
-
 def excluir_escuelas_sin_matricula(escuelas_df):
     # Se excluyen del dataset las escuelas que no tienen información de matrícula. Se toma esta decisión dado que aplicar algún método de imputación 
     # sobre esta columna más bien podría afectar los resultados del modelo de predicción
@@ -86,81 +84,16 @@ def aplicar_imputacion_con_la_media(escuelas_df):
         valor_media = media[0]  
 
         # Se realiza la imputación de los nulos por la media
-        escuelas_df = escuelas_df.fillna(valor_media,columna)
-    
-#    # Se obtiene el valor de la media de la columna aab15
-#     media_df = \
-#     escuelas_df.select(
-#         round(mean(col('aab15'))).alias('media')
-#     )
-#     media_df = media_df.select(media_df.media.cast(IntegerType()))
-#     media = media_df.collect()[0]
-
-#     valor_media = media[0]  
-
-#     print (valor_media)
-    
-#     # Se realiza la imputación de los nulos por la media
-#     escuelas_df = escuelas_df.fillna(valor_media,'aab15')    
+        escuelas_df = escuelas_df.fillna(valor_media,columna) 
 
     return escuelas_df
 
-def aplicar_imputacion_con_la_moda(escuelas_df):
-
-
-    bins, counts = escuelas_df.select('regplan15').rdd.flatMap(lambda x: x).histogram(20)
-    print(bins, counts)
-    # plt.hist(bins[:-1], bins=bins, weights=counts)
-    print(plt)
-    # plt.show()
-
-    # Se realiza imputación con la media para las columnas "aat15" y "aab15"
-    # Se decide sustitir por la media porque estas columnas corresponden a cantidad total de aulas y a cantidad de aulas buenas, por lo que se considera que la media 
-    # es un valor aceptable para sustituir los nulos
-
-    # lista_columnas_imputar_con_moda = ['regplan15']
-    
-    # for columna in lista_columnas_imputar_con_moda:
-    #     # Se obtiene el valor de la media para la columna
-    #     media_df = \
-    #     escuelas_df.select(
-    #         round(mode(col(columna))).alias('media')
-    #     )
-    #     media_df = media_df.select(media_df.media.cast(IntegerType()))
-    #     media = media_df.collect()[0]
-
-    #     valor_media = media[0]  
-
-    #     print (valor_media)
-
-    #     # Se realiza la imputación de los nulos por la media
-    #     escuelas_df = escuelas_df.fillna(valor_media,columna)
-    
-   # Se obtiene el valor de la media de la columna aab15
-    # media_df = \
-    # escuelas_df.select(
-    #     round(mode(col('regplan15'))).alias('media')
-    # )
-    # media_df = media_df.select(media_df.media.cast(IntegerType()))
-    # media = media_df.collect()[0]
-
-    # valor_media = media[0]  
-
-    # print (valor_media)
-    
-    # # Se realiza la imputación de los nulos por la media
-    # escuelas_df = escuelas_df.fillna(valor_media,'regplan15')    
-
-    # return escuelas_df    
 
 def corregir_columnas_negativas(escuelas_df):
 
     # Existen 2 columnas que erroneamente tienen valores negativos ("Exclusión intra-anual Total (desert_15)" y "Exclusión intra-anual Hombres (deserh_15)"), 
     # por lo tanto se toma la desición de setear los valores negativos a 0
 
-    # escuelas_df = escuelas_df.where(col('deserh_15') < 0)
-    # print (escuelas_df.count())
-    
     valor = 0
 
     lista_columnas_a_actualizar = ['desert_15', 'deserh_15']
@@ -174,19 +107,14 @@ def corregir_columnas_negativas(escuelas_df):
             ).otherwise(col(columna))
             )
 
-    # escuelas_df = escuelas_df.where(col('deserh_15') < 0)
-    # print (escuelas_df.count())   
-    return escuelas_df    
+    return escuelas_df
 
 def aplicar_imputacion_aprobados(escuelas_df):
 
     # En la columna de "cantidad de aprobados total (aprobt_15)" y "cantidad de aprobados hombres (aprobh_15)" existen valores erroneos donde la cantidad
     # de aprobados es mayor a la cantidad de matriculados, o bien, la columna está en null. Para estos casos se procede a calcular la cantida de aprobados
-    # como cantidad de matriculas - cantidad de reprobados - cantidad de abandono - cantidad con exclusión intra-anual
-    
-    # escuelas_df = escuelas_df.where((col('aprobh_15') > col('mih_15')) | (col('aprobh_15').isNull()))
-    # print (escuelas_df.count())
-    
+    # como cantidad de matriculados - cantidad de reprobados - cantidad de abandono - cantidad con exclusión intra-anual
+       
     # Calculo para la columna "aprobt_15"
     escuelas_df = escuelas_df.withColumn(
         'aprobt_15',
@@ -205,12 +133,7 @@ def aplicar_imputacion_aprobados(escuelas_df):
         ).otherwise(col('aprobh_15'))
         )        
 
-    # escuelas_df = escuelas_df.where(col('aprobt_15') > col('mit_15'))
-    # print (escuelas_df.count())   
-    # escuelas_df = escuelas_df.where(col('llave') == 160)
-    # escuelas_df = escuelas_df.select (col('aprobh_15'))
-    # escuelas_df.show()
-    return escuelas_df    
+    return escuelas_df
 
 def agregar_columna_PromocionAlta(escuelas_df):
 
@@ -228,57 +151,18 @@ def agregar_columna_PromocionAlta(escuelas_df):
         ).otherwise(0)
         )        
 
-    # escuelas_df.show()
+    # Se elimina la columna "PorcentajeAprobados" dado que ya no se necesita
     escuelas_df = escuelas_df \
         .drop('PorcentajeAprobados') \
 
-    # escuelas_df = escuelas_df.where(col('aprobt_15') > col('mit_15'))
-    # print (escuelas_df.count())   
-    # escuelas_df = escuelas_df.where(col('PromocionAlta') == 0)
-    # escuelas_df = escuelas_df.select (col('PromocionAlta'))
-    # escuelas_df.show()
-    # print (escuelas_df.count())
-    return escuelas_df  
-
-# def verifica_columnas_nulas_en_escuelas(escuelas_df):
-
-#     # Verifica que no haya quedado ninguna columna con valores nulos
-#     cantidad_nulos = 0
-#     for columna in escuelas_df.columns: 
-#         columnas_null_df = escuelas_df.where(col(columna).isNull())
-#         if columnas_null_df.count() != 0:
-#             cantidad_nulos = cantidad_nulos + columnas_null_df.count()
-#             print ("Existen valores nulos en la columna: ", columna)   
-
-#     if  cantidad_nulos == 0:
-#         print ("No existe ninguna columna con valores nulos.")      
-
-def reemplazar_nombre_columna (df, nombre_anterior, nombre_nuevo):
-    # Renombra columna de un dataset
-    df = df.withColumnRenamed(nombre_anterior, nombre_nuevo)
-    
-    return df
+    return escuelas_df
+     
 
 def join_dataframes(escuelas_df, ids_df):
     
-    # Une los datos de los 2 dataframes: escuelas y IDS (índice de desarrollo social)
+    # Hace join de los 2 dataframes: escuelas y IDS (índice de desarrollo social) por el código de distrito
     escuelas_ids_df = escuelas_df.join(ids_df, escuelas_df.cddis15 == ids_df.Codigo)
 
     return escuelas_ids_df
-
-def program_princ():
-    escuelas_df, ids_df = cargar_archivos_csv()
-    escuelas_df = excluir_escuelas_sin_matricula(escuelas_df)
-    escuelas_df = aplicar_imputacion_valor_fijo(escuelas_df)
-    escuelas_df = aplicar_imputacion_con_la_media(escuelas_df)
-    escuelas_df = corregir_columnas_negativas(escuelas_df)
-    escuelas_df = aplicar_imputacion_aprobados(escuelas_df)
-    escuelas_df = agregar_columna_PromocionAlta(escuelas_df)
-    # escuelas_df = verifica_columnas_nulas_en_escuelas(escuelas_df)
-    # ids_df = reemplazar_nombre_columna (ids_df, 'Codigo', 'CodigoDistrito')
-    # escuelas_ids_df = join_dataframes(escuelas_df, ids_df)
-
-program_princ()    
-
 
 

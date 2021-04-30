@@ -5,8 +5,9 @@ from .proyecto_funciones import aplicar_imputacion_con_la_media
 from .proyecto_funciones import corregir_columnas_negativas
 from .proyecto_funciones import aplicar_imputacion_aprobados
 from .proyecto_funciones import agregar_columna_PromocionAlta
-from .proyecto_funciones import reemplazar_nombre_columna
 from .proyecto_funciones import join_dataframes
+
+################################# cargar_archivos_csv ###########################################
 
 # Prueba la función cargar_archivos_csv al cargar el archivo de escuelas "megabaseprimaria_2015.csv", valida que al cargar el archivo a un dataframe la cantidad de registros 
 # del dataframe coincida con la cantidad real de registros que tiene el csv
@@ -32,7 +33,8 @@ def test_cargar_archivos_csv_ids(spark_session):
 
     assert actual == esperado       
 
-############################################################################
+################################# excluir_escuelas_sin_matricula ###########################################
+
 # Pruebas para la función excluir_escuelas_sin_matricula
 # Se prueba la función excluir_escuelas_sin_matricula cuando alguno de los registros de la columna "mit_15" (que corresponde a la matrícula) tiene null, en este caso se espera que ese registro de escuela sea excluido
 def test_excluir_escuelas_sin_matricula_campo_matricula_null(spark_session):
@@ -119,7 +121,8 @@ def test_excluir_escuelas_sin_matricula_otros_campos_null(spark_session):
 
     assert actual_ds.collect() == esperado_ds.collect()       
 
-########################################################################
+############################# aplicar_imputacion_valor_fijo ###########################################
+
 # Se prueba la función aplicar_imputacion_valor_fijo cuando existen registros con null en varias columnas para las cuales se definió que la imputación debería hacerle sustituyendo el valor 
 # null por un cero. En este caso se espera que la función devuelva los mismos registros, pero haciendo el reemplazo del null por 0
 def test_aplicar_imputacion_valor_fijo_reemplazo_con_cero(spark_session):
@@ -209,7 +212,8 @@ def test_aplicar_imputacion_valor_fijo_todos_los_campos_sin_null(spark_session):
 
     assert actual_ds.collect() == esperado_ds.collect()    
 
-#################################################################
+########################### aplicar_imputacion_con_la_media ######################################
+
 # Se prueba la función aplicar_imputacion_con_la_media cuando existen registros con null en las columnas "aat15" (que corresponde a "Aulas para impartir lecciones I y II ciclos total") 
 # o "aab15" (que corresponde a "Aulas para impartir lecciones I y II ciclos buenas")
 # En este caso se espera que la función devuelva los mismos registros, pero haciendo el reemplazo del valor null por la media de la columna (redondeada, dado que el campo es un integer) 
@@ -277,7 +281,8 @@ def test_aplicar_imputacion_con_la_media_todos_los_campos_sin_null(spark_session
 
     assert actual_ds.collect() == esperado_ds.collect()    
 
-#################################################################
+########################### corregir_columnas_negativas ######################################
+
 # Se prueba la función corregir_columnas_negativas cuando existen registros negativos en las columnas 'desert_15' o 'deserh_15'
 # En este caso se espera que la función devuelva los mismos registros, pero haciendo el reemplazo del valor negativo por un 0
 def test_corregir_columnas_negativas_desert15_y_deserh15(spark_session):
@@ -341,7 +346,8 @@ def test_corregir_columnas_negativas_columnas_desert15_y_deserh15_sin_nulos(spar
 
     assert actual_ds.collect() == esperado_ds.collect()                
 
-#################################################################
+########################### aplicar_imputacion_aprobados ######################################
+
 # Se prueba la función aplicar_imputacion_aprobados cuando existen registros en la columna 'aprobt_15' (cantidad de aprobados total) 
 # cuyo valor es mayor a la cantidad total de estudiantes matriculados (es decir, es un valor inconsistente) 
 # En este caso se espera que se reemplacen dichos valores con la siguiente fórmula: aprobt_15 = mit_15 - reprot_15 - desa_15 - desert_15
@@ -505,7 +511,8 @@ def test_aplicar_imputacion_aprobados_columnas_aprobt15_y_aprobh15_correctas(spa
 
     assert actual_ds.collect() == esperado_ds.collect() 
 
-############################################################################      
+################################## agregar_columna_PromocionAlta ##########################################
+#       
 # Se prueba la función agregar_columna_PromocionAlta cuando las escuelas presentan un porcentaje de aprobación (cantidad de aprobados*100/cantidad de matriculados: aprobt_15'*100/'mit_15') 
 # mayor al 95%. En este caso se espera que la función devuelva el mismo dataframe pero con una columna adicional llamada "PromocionAlta" que tenga el valor de 1 para cada registro
 def test_agregar_columna_PromocionAlta_Si(spark_session):
@@ -565,8 +572,9 @@ def test_agregar_columna_PromocionAlta_No(spark_session):
     actual_ds.show()
 
     assert actual_ds.collect() == esperado_ds.collect()     
-    
-############################################################################
+
+################################# join_dataframes ###########################################
+
 # Se prueba la función join_dataframes cuando todos los campos de la columna cddis15 del dataframe de escuelas (que corresponde al distrito) hace join con algún campo 
 # de la columna Codigo del dataset IDS (índice de desarrollo social)
 # En este caso se espera que la función devuelve un dataframe con el join de las escuelas con la información del índice de desarrollo social del distrito donde se encuentra la escuela
