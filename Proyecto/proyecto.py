@@ -22,7 +22,16 @@ def programaPrincipal():
     #llama a la función que carga los archivos .csv en dataframes
     escuelas_df, ids_df = proyecto_funciones.cargar_archivos_csv()
     
-    #almacena en base de datos, en una tabla llamada "escuelas" el dataframe que contiene la información de las escuelas ya procesada
+    # ejecuta todas las funciones para el preprocesamiento de los datos 
+    escuelas_df = proyecto_funciones.excluir_escuelas_sin_matricula(escuelas_df)
+    escuelas_df = proyecto_funciones.aplicar_imputacion_valor_fijo(escuelas_df)
+    escuelas_df = proyecto_funciones.aplicar_imputacion_con_la_media(escuelas_df)
+    escuelas_df = proyecto_funciones.corregir_columnas_negativas(escuelas_df)
+    escuelas_df = proyecto_funciones.aplicar_imputacion_aprobados(escuelas_df)
+    escuelas_df = proyecto_funciones.agregar_columna_PromocionAlta(escuelas_df)
+    escuelas_ids_df = proyecto_funciones.join_dataframes(escuelas_df, ids_df)  
+
+   #almacena en base de datos, en una tabla llamada "escuelas" el dataframe que contiene la información de las escuelas ya preprocesada
     escuelas_df \
         .write \
         .mode("overwrite") \
@@ -33,7 +42,7 @@ def programaPrincipal():
         .option("dbtable", "escuelas") \
         .save()      
 
-    #almacena en base de datos, en una tabla llamada "ids" el dataframe que contiene la información del indice de desarrollo social distrital, ya procesada
+    #almacena en base de datos, en una tabla llamada "ids" el dataframe que contiene la información del indice de desarrollo social distrital, ya preprocesada
     ids_df \
         .write \
         .mode("overwrite") \
@@ -42,16 +51,7 @@ def programaPrincipal():
         .option("user", "postgres") \
         .option("password", "testPassword") \
         .option("dbtable", "ids") \
-        .save()           
-
-    # ejecuta todas las funciones para el preprocesamiento de los datos 
-    escuelas_df = proyecto_funciones.excluir_escuelas_sin_matricula(escuelas_df)
-    escuelas_df = proyecto_funciones.aplicar_imputacion_valor_fijo(escuelas_df)
-    escuelas_df = proyecto_funciones.aplicar_imputacion_con_la_media(escuelas_df)
-    escuelas_df = proyecto_funciones.corregir_columnas_negativas(escuelas_df)
-    escuelas_df = proyecto_funciones.aplicar_imputacion_aprobados(escuelas_df)
-    escuelas_df = proyecto_funciones.agregar_columna_PromocionAlta(escuelas_df)
-    escuelas_ids_df = proyecto_funciones.join_dataframes(escuelas_df, ids_df)       
+        .save()                    
 
     #almacena en base de datos, en una tabla llamada "escuelas_ids" el dataframe que contiene la información de las escuelas y el índice de desarrollo social distrital, ya cruzados
     escuelas_ids_df \
